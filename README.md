@@ -7,20 +7,31 @@
 它不修改 `~/Documents/muscle-rl`、`~/Documents/muscle` 或任何已有 checkpoint。
 上游代码只以只读方式放在 `external/`（不入 git）。
 
-## 当前结论（2026-10-29）
+## 当前结论（2026-10-29，已完成 10 s 验收）
 
-**因数据不足无法判定 10 s 验收。** 在本地可获得的全部参考片段上：
+> **未通过 10 s 验收：3/20（目标 18/20）。**
+> 20/20 跑满 10.00 s、无跌倒、速度/倾角/根高全达标；**17/20 最大侧偏 >0.35 m**（最大 1.19 m）。
+> 失败模式是**180° 转身时转弯半径偏大，转完后沿参考平行线行走**，不是跌倒或走不动。
 
-| 片段 | 时长 | 20 seed（stochastic） | 除 10 s/速度外的判据 | 速度 |
-|---|---:|---|---|---:|
-| `KIT/314/walking_medium09` | 7.72 s | 20/20 走完整段，无跌倒 | 20/20 满足 | 0.328 m/s（参考 0.335） |
-| `KIT/4/WalkInCounterClockwiseCircle04` | 8.39 s | 20/20 走完整段，无跌倒 | 18/20 满足（2 个 seed 侧偏 >0.35 m） | 0.514 m/s |
-| walking_medium09（deterministic） | 7.72 s | 20/20 走完整段，无跌倒 | **0/20**（横向漂移 0.61 m） | 0.311 m/s |
+| 片段 | 组 | 时长 | 20 seed（stochastic） | v_fwd | 侧偏 mean [min,max] |
+|---|---|---:|---|---:|---|
+| `KIT/3/walk_6m_straight_line06` | **TRAIN** | **14.90 s** | **3/20 通过**（唯一满足 10 s 前置条件的片段） | 0.668 | 0.582 [0.271, 1.192] |
+| `KIT/314/walking_medium09` | TRAIN | 7.72 s | 20/20 通过侧偏等判据（时长/速度不达标） | 0.327 | 0.151 [0.065, 0.275] |
+| `KIT/3/walk_6m_straight_line04` | TRAIN | 7.35 s | 13/20 满足侧偏 | 0.782 | 0.314 [0.172, 0.446] |
+| `KIT/4/WalkInCounterClockwiseCircle04` | TEST | 8.39 s | 14/20 满足侧偏 | 0.514 | 0.295 [0.178, 0.568] |
+| `KIT/314/walking_medium09`（deterministic） | TRAIN | 7.72 s | 0/20（横向漂移 0.61 m） | 0.311 | 0.606 |
 
-- 没有 ≥10 s 的可用片段，且参考本身平均速度 <0.6 m/s → 10 s / 0.6 m/s 判据**无法检验**。
+- 整个数据集 1190 条动作里**只有 1 条 ≥10 s**，且属于**训练组** → 10 s 结果 **in-sample**。
+  官方 testing 组最长 8.53 s，物理上无法满足 10 s 判据。
 - 之前“官方 checkpoint 回放会倒”在本机可复现，原因是 `musclemimic_models` **1.0.6**：
   3/3 seed 在 2.5–2.8 s 跌倒；固定到 **1.0.5** 后 3/3 正常，单因子回退腿 XML 即可恢复。
-- 详细决策与下一步：`reports/decision.md`。
+- 详细判定：`reports/decision.md`；10 s 结果：`reports/C_acceptance.md` C8 节；
+  逐 seed 表：`reports/table_10s_long.md`。
+
+10 s 验收视频（20 fps，叠加真实时间轴与倾角）：
+
+- `reports/video/10s_walk_6m_straight_line06_seed0_SUCCESS.mp4`（seed 0，侧偏 0.333 m，通过）
+- `reports/video/10s_walk_6m_straight_line06_seed10_LATERAL_FAIL.mp4`（seed 10，侧偏 1.192 m）
 
 ## 环境（已冻结）
 
@@ -157,8 +168,11 @@ MUJOCO_GL=egl .venv/bin/python scripts/eval_walk.py \
   --mode stochastic --seeds 0 --video --video_every 5 \
   --out_dir runs/C_acceptance_video
 
-# 拿到 gated 数据集访问后：下载 14.9 s 片段 → 前置校验 → 20 seed 验收
+# 10 s 验收（已取得数据集访问）：下载 14.9 s 片段 → 前置校验 → 20 seed 验收 → 视频
 bash scripts/after_access_10s.sh
+MUJOCO_GL=egl .venv/bin/python scripts/eval_walk.py \
+  --motion_path KIT/3/walk_6m_straight_line06_poses \
+  --mode stochastic --seeds 0 10 --video --video_every 5 --out_dir runs/C_video_10s
 
 # D) 版本配对回放（1.0.6 / 1.0.6+1.0.5 腿）
 git -C external/musclemimic_models archive v1.0.6 | tar -x -C /tmp/mm_models_106
@@ -190,9 +204,11 @@ reports/
   D_model_version_compatibility.md
   decision.md            ← 通过 / 未通过 / 因数据不足无法判定
   env_audit.json, motion_stats.json, obs_layout.json, joint_map.json
-  table_walk.md, table_walk_det.md, table_circle.md  逐 seed 表
+  table_walk.md, table_walk_det.md, table_circle.md, table_10s_long.md,
+  table_diag_straight.md         逐 seed 表
   D_model_divergence/            版本对比的 reset 状态与 XML 哈希
   logs/                 过滤后的官方回放/套件/审计日志（证据）
+  video/10s_*_seed0_SUCCESS.mp4, 10s_*_seed10_LATERAL_FAIL.mp4   ← 10 s 验收视频
   video/walking_medium09_stochastic_seed0.mp4
 runs/                    每次运行的 JSON/CSV/NPZ/日志（npz/mp4/log 不入 git）
 external/                只读上游源码（不入 git）

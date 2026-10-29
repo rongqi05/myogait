@@ -53,7 +53,8 @@
     "net_speed": 0.31254701800093043,
     "forward_distance": 2.4043666459107516,
     "max_lateral_offset": 0.6063881273281524,
-    "max_lateral_from_reference": 0.40525941008287514,
+    "max_lateral_from_reference_initial_frame": 0.40525941008287514,
+    "max_cross_track_from_reference": 0.5925927288110227,
     "max_lateral_deviation": 0.6063881273281524,
     "max_tilt_pelvis_deg": 8.18880511896102,
     "max_tilt_torso_deg": 29.32601881004886,
@@ -85,9 +86,9 @@
     "ref_start_step": 0,
     "ref_end_step": 772,
     "ref_end_phase": 1.0,
-    "wall_time_s": 11.485763549804688,
-    "build_time_s": 2.1875393390655518,
-    "max_rss_mb": 2547.89453125
+    "wall_time_s": 13.555089235305786,
+    "build_time_s": 2.456432342529297,
+    "max_rss_mb": 2585.19921875
   },
   {
     "seed": 1,
@@ -143,7 +144,8 @@
     "net_speed": 0.31254701800093043,
     "forward_distance": 2.4043666459107516,
     "max_lateral_offset": 0.6063881273281524,
-    "max_lateral_from_reference": 0.40525941008287514,
+    "max_lateral_from_reference_initial_frame": 0.40525941008287514,
+    "max_cross_track_from_reference": 0.5925927288110227,
     "max_lateral_deviation": 0.6063881273281524,
     "max_tilt_pelvis_deg": 8.18880511896102,
     "max_tilt_torso_deg": 29.32601881004886,
@@ -175,9 +177,9 @@
     "ref_start_step": 0,
     "ref_end_step": 772,
     "ref_end_phase": 1.0,
-    "wall_time_s": 11.159156799316406,
-    "build_time_s": 1.6011881828308105,
-    "max_rss_mb": 2795.6484375
+    "wall_time_s": 23.920478582382202,
+    "build_time_s": 1.7623968124389648,
+    "max_rss_mb": 2826.1484375
   },
   {
     "seed": 2,
@@ -233,7 +235,8 @@
     "net_speed": 0.31254701800093043,
     "forward_distance": 2.4043666459107516,
     "max_lateral_offset": 0.6063881273281524,
-    "max_lateral_from_reference": 0.40525941008287514,
+    "max_lateral_from_reference_initial_frame": 0.40525941008287514,
+    "max_cross_track_from_reference": 0.5925927288110227,
     "max_lateral_deviation": 0.6063881273281524,
     "max_tilt_pelvis_deg": 8.18880511896102,
     "max_tilt_torso_deg": 29.32601881004886,
@@ -265,8 +268,8 @@
     "ref_start_step": 0,
     "ref_end_step": 772,
     "ref_end_phase": 1.0,
-    "wall_time_s": 11.295602560043335,
-    "build_time_s": 1.7942698001861572,
-    "max_rss_mb": 2931.28125
+    "wall_time_s": 13.398326396942139,
+    "build_time_s": 2.0978121757507324,
+    "max_rss_mb": 2975.26953125
   }
 ]

@@ -208,6 +208,7 @@ def rollout(
     record_video: bool = False,
     video_every: int = 5,
     strict_termination: bool = False,
+    horizon: int | None = None,
 ) -> dict:
     deterministic = mode == "deterministic"
     t_build = time.time()
@@ -217,6 +218,7 @@ def rollout(
         start_step=start_step,
         traj_index=0,
         strict_termination=strict_termination,
+        horizon=horizon,
     )
     env = bundle.env
     model = env_model(env)
@@ -452,14 +454,16 @@ def rollout(
         clip_end = bool(ref_step >= traj_len - 1)
     handler_checks = probe.checks(obs, info) if done else {}
 
+    horizon_reached = bool(horizon is not None and n_steps >= int(horizon)) or bool(
+        env.info.horizon is not None and n_steps >= int(env.info.horizon)
+    )
+
     if reset_override:
         reason = "reset_or_state_override"
     elif numeric_anomaly:
         reason = "numeric_anomaly"
     elif height_min < FALL_HEIGHT or max(tilt_max_pelvis, tilt_max_torso) > FALL_TILT_DEG:
         reason = "physical_fall"
-    elif clip_end:
-        reason = "clip_end"
     elif done and (
         handler_checks.get("mean_site_deviation") is True
         or handler_checks.get("root_deviation") is True
@@ -467,7 +471,13 @@ def rollout(
         or handler_checks.get("height_violation") is True
     ):
         reason = "reference_deviation"
-    elif duration >= seconds - 1e-9 and not done:
+    elif clip_end:
+        reason = "clip_end"
+    elif duration >= seconds - 1e-9:
+        # Survived the full window. `done` may be true here because the env
+        # truncates at `horizon`; that is a time limit, not a failure.
+        reason = "time_limit_success"
+    elif done and horizon_reached:
         reason = "time_limit_success"
     elif done:
         reason = "other"
@@ -484,6 +494,7 @@ def rollout(
     lateral_cum = 0.0
     lateral_max = 0.0
     lateral_from_ref_max = 0.0
+    cross_track_max = 0.0
     prev_heading = forward
     for i in range(1, len(root_xy)):
         dref = ref_xy[i] - ref_xy[i - 1]
@@ -493,10 +504,17 @@ def rollout(
         forward_dist += float(np.dot(dstep, prev_heading))
         lateral_cum += float(np.dot(dstep, np.array([-prev_heading[1], prev_heading[0]])))
         lateral_max = max(lateral_max, abs(lateral_cum))
+        # Rotation-invariant cross-track error: the policy-reference offset
+        # projected on the *instantaneous* reference normal.
+        rel_i = root_xy[i] - ref_xy[i]
+        cross_track_max = max(cross_track_max, abs(float(np.dot(rel_i, np.array([-prev_heading[1], prev_heading[0]])))))
     rel = root_xy - ref_xy
     for i in range(len(rel)):
         lateral_from_ref_max = max(lateral_from_ref_max, abs(float(np.dot(rel[i], lateral_axis))))
-    lateral_dev = max(lateral_max, lateral_from_ref_max)
+    # The initial-frame projection is NOT rotation invariant: on a turning clip a
+    # perfectly tracked 180 degree turn shows a large value. It is kept only as a
+    # straight-line diagnostic; the criterion uses rotation-invariant quantities.
+    lateral_dev = max(lateral_max, cross_track_max)
     avg_forward_speed = forward_dist / duration if duration > 0 else 0.0
 
     ctrl_abs = np.array([np.abs(s["ctrl"]).mean() for s in steps]) if steps else np.zeros(1)
@@ -568,6 +586,7 @@ def rollout(
         and criteria["max_lateral_le_0.35"]
     )
 
+    end_condition = reason
     if reason == "time_limit_success" and not success:
         failed = [k for k, v in criteria.items() if not v]
         reason = "other"
@@ -589,6 +608,8 @@ def rollout(
         "duration_s": duration,
         "reset_time": reset_time,
         "reason": reason,
+        "end_condition": end_condition,
+        "survived_full_window": bool(duration >= seconds - 1e-9),
         "success": bool(success),
         "failure_detail": failure_detail,
         "criteria": criteria,
@@ -600,12 +621,15 @@ def rollout(
         "slip_per_meter": slip_per_meter,
         "handler_checks_at_end": handler_checks,
         "clip_ended": clip_end,
+        "horizon": int(env.info.horizon),
+        "horizon_reached": horizon_reached,
         "env_done": bool(done),
         "avg_forward_speed": avg_forward_speed,
         "net_speed": net_speed,
         "forward_distance": forward_dist,
         "max_lateral_offset": lateral_max,
-        "max_lateral_from_reference": lateral_from_ref_max,
+        "max_lateral_from_reference_initial_frame": lateral_from_ref_max,
+        "max_cross_track_from_reference": cross_track_max,
         "max_lateral_deviation": lateral_dev,
         "max_tilt_pelvis_deg": tilt_max_pelvis,
         "max_tilt_torso_deg": tilt_max_torso,
@@ -719,6 +743,12 @@ def main() -> int:
     ap.add_argument("--video", action="store_true", help="record an mp4 for each seed")
     ap.add_argument("--video_every", type=int, default=5)
     ap.add_argument("--strict_termination", action="store_true")
+    ap.add_argument(
+        "--horizon",
+        type=int,
+        default=None,
+        help="Override env horizon (control steps). Default uses the checkpoint value (1000 = 10 s).",
+    )
     args = ap.parse_args()
 
     out_dir = Path(args.out_dir) / args.mode
@@ -737,6 +767,7 @@ def main() -> int:
             record_video=args.video,
             video_every=args.video_every,
             strict_termination=args.strict_termination,
+            horizon=args.horizon,
         )
         results.append(r)
         print(
@@ -756,8 +787,9 @@ def main() -> int:
         "avg_forward_speed",
         "net_speed",
         "max_lateral_offset",
-        "max_lateral_from_reference",
+        "max_cross_track_from_reference",
         "max_lateral_deviation",
+        "max_lateral_from_reference_initial_frame",
         "max_tilt_pelvis_deg",
         "max_tilt_torso_deg",
         "min_root_height",

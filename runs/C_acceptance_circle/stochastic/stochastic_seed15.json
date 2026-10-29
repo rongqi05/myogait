@@ -51,8 +51,9 @@
   "net_speed": 0.05375745377556879,
   "forward_distance": 4.359469958497532,
   "max_lateral_offset": 0.2937444307643831,
-  "max_lateral_from_reference": 0.21895500158145353,
-  "max_lateral_deviation": 0.2937444307643831,
+  "max_lateral_from_reference_initial_frame": 0.21895500158145353,
+  "max_cross_track_from_reference": 0.3343873011348099,
+  "max_lateral_deviation": 0.3343873011348099,
   "max_tilt_pelvis_deg": 10.561886445614759,
   "max_tilt_torso_deg": 32.81001848377264,
   "min_root_height": 0.8804152479822406,
@@ -83,7 +84,7 @@
   "ref_start_step": 0,
   "ref_end_step": 839,
   "ref_end_phase": 1.0,
-  "wall_time_s": 13.167249202728271,
-  "build_time_s": 1.711292028427124,
-  "max_rss_mb": 4065.5546875
+  "wall_time_s": 13.091821908950806,
+  "build_time_s": 1.9021179676055908,
+  "max_rss_mb": 3990.62109375
 }

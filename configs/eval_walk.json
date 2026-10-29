@@ -1,5 +1,5 @@
 {
-  "protocol_version": "1.0",
+  "protocol_version": "1.1",
   "frozen": {
     "musclemimic_src_commit": "47b653db2bce25de834360d2ee6b2dd88142bd78",
     "musclemimic_models_version": "1.0.5",
@@ -65,10 +65,20 @@
   "definitions": {
     "duration": "data.time at last logged step - data.time right after the single reset",
     "avg_forward_speed": "sum of per-step pelvis displacement projected on the instantaneous reference heading / duration",
-    "max_lateral_offset": "max |cumulative integral of the cross-track component of per-step pelvis displacement| relative to the instantaneous reference heading",
-    "max_lateral_from_reference": "max perpendicular distance between policy pelvis and reference pelvis, projected on the lateral axis of the initial reference heading",
+    "max_lateral_offset": "max |cumulative integral of the cross-track component of per-step pelvis displacement| relative to the instantaneous reference heading (rotation invariant)",
     "tilt": "pelvis: angle between root body +z and world +z; trunk: angle between (upper_body_mimic - pelvis_mimic) and world +z",
     "foot_slip": "tangential speed of the contacting foot material point (v_body + omega x r), integrated while normal force > 20 N",
-    "max_lateral_deviation": "max(max_lateral_offset, max_lateral_from_reference); this is the quantity compared against the 0.35 m threshold"
-  }
+    "max_lateral_deviation": "max(max_lateral_offset, max_cross_track_from_reference); this is the quantity compared against the 0.35 m threshold",
+    "max_cross_track_from_reference": "max |(policy pelvis - reference pelvis) projected on the instantaneous reference normal|; on a curved reference this also captures corner-cutting",
+    "max_lateral_from_reference_initial_frame": "diagnostic only: projection on the lateral axis of the INITIAL reference heading. Not rotation invariant, so it is reported but never used as a criterion (a perfectly tracked 180 deg turn would violate it)."
+  },
+  "metric_change_log": [
+    {
+      "date": "2026-10-29",
+      "from": "max_lateral_deviation = max(lateral_integral, initial_frame_projection)",
+      "to": "max_lateral_deviation = max(lateral_integral, instantaneous_frame_cross_track)",
+      "reason": "initial-frame projection is not rotation invariant; it would fail a correctly tracked turning reference. Changed after inspecting the 14.9 s turn-around clip, before running acceptance on it.",
+      "effect": "stricter on curved references (circle: mean 0.176 -> 0.280); unchanged for straight clips"
+    }
+  ]
 }

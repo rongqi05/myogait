@@ -14,7 +14,7 @@ import re
 from pathlib import Path
 
 HEADER = (
-    "| seed | reason | dur (s) | v_fwd (m/s) | lat dev (m) | lat ref (m) | "
+    "| seed | reason | dur (s) | v_fwd (m/s) | lat dev (m) | x-track (m) | "
     "tilt pelvis/trunk (deg) | min root z (m) | onsets | slip/m L/R | clip clean |"
 )
 SEP = "|---:|---|---:|---:|---:|---:|---|---:|---:|---|---|"
@@ -35,7 +35,7 @@ def main() -> int:
         r = json.load(open(f))
         lines.append(
             "| {seed} | {reason} | {duration_s:.2f} | {avg_forward_speed:.3f} | "
-            "{max_lateral_deviation:.3f} | {max_lateral_from_reference:.3f} | "
+            "{max_lateral_deviation:.3f} | {max_cross_track_from_reference:.3f} | "
             "{max_tilt_pelvis_deg:.1f} / {max_tilt_torso_deg:.1f} | {min_root_height:.3f} | "
             "{n_foot_contact_onsets_total} | {sl:.3f} / {sr:.3f} | {cc} |".format(
                 sl=r["slip_per_meter"]["left"],

@@ -23,15 +23,16 @@
     "no_reset_or_state_override": true,
     "reference_not_ended": false,
     "avg_forward_speed_ge_0.6": false,
-    "max_lateral_le_0.35": true,
+    "max_lateral_le_0.35": false,
     "max_tilt_le_45": true
   },
   "blocking_criteria": [
     "duration_ge_10s",
     "reference_not_ended",
-    "avg_forward_speed_ge_0.6"
+    "avg_forward_speed_ge_0.6",
+    "max_lateral_le_0.35"
   ],
-  "clip_completed_without_failure": true,
+  "clip_completed_without_failure": false,
   "walking_window_s": [
     0.04000000000000002,
     7.379999999999409
@@ -51,8 +52,9 @@
   "net_speed": 0.05473377143218355,
   "forward_distance": 4.245858180817498,
   "max_lateral_offset": 0.20410872169787925,
-  "max_lateral_from_reference": 0.3470512681768302,
-  "max_lateral_deviation": 0.3470512681768302,
+  "max_lateral_from_reference_initial_frame": 0.3470512681768302,
+  "max_cross_track_from_reference": 0.3875485283004558,
+  "max_lateral_deviation": 0.3875485283004558,
   "max_tilt_pelvis_deg": 11.3457094099044,
   "max_tilt_torso_deg": 32.12960108552576,
   "min_root_height": 0.8862562212174536,
@@ -83,7 +85,7 @@
   "ref_start_step": 0,
   "ref_end_step": 839,
   "ref_end_phase": 1.0,
-  "wall_time_s": 13.103266954421997,
-  "build_time_s": 1.7022731304168701,
-  "max_rss_mb": 4097.3515625
+  "wall_time_s": 12.922680377960205,
+  "build_time_s": 1.692098617553711,
+  "max_rss_mb": 4074.3984375
 }

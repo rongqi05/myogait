@@ -206,3 +206,110 @@ stochastic 采样反而把误差“打散”了。因此后续 20 seed 验收以
   `numeric_anomaly` / `reset_or_state_override`。
 - 参考偏差在 stochastic 固定起点下从未触发（handler 检查在结束时均为 False）。
 - 20 seed 同进程顺序执行，峰值 RSS 2.5–4.3 GB，无 swap 压力；总耗时约 4 分钟/组。
+
+---
+
+# C8. 10 s 验收（取得完整数据集访问后，2026-10-29 21:5x）
+
+## C8.1 片段筛选（按预先声明的规则，不做事后挑选）
+
+规则：在 `amathislab/musclemimic-retargeted` 的**全部 1190 条** MyoFullBody 动作中，选
+"时长 ≥10 s 且前 10 s 参考路径速度 ≥0.6 m/s"的片段。结果：
+
+| 片段 | 组 | 时长 | 前 10 s 路径速度 | 是否满足前置条件 |
+|---|---|---:|---:|---|
+| **KIT/3/walk_6m_straight_line06** | **TRAIN** | **14.90 s** | **0.752 m/s** | **✅ 唯一** |
+| KIT/3/walk_6m_straight_line04 | TRAIN | 7.35 s | 0.803 | ✗（太短） |
+| KIT/4/WalkInCounterClockwiseCircle08 | TEST | 8.53 s | 0.606 | ✗（太短） |
+| KIT/424/walking_slow08 | TEST | 8.51 s | 0.234 | ✗ |
+| 其余 107 条 testing 片段 | TEST | ≤8.53 s | — | ✗ |
+
+**重要限制（必须披露）**：
+1. 整个数据集里**只有一条** ≥10 s 的行走片段，且它属于**训练组**（`KIT_KINESIS_TRAINING_MOTIONS`）。
+   因此 10 s 结果**是 in-sample 的**，比 testing 组结果强。
+2. 官方 testing 组最长片段仅 **8.53 s**，物理上不可能满足 10 s 判据。
+
+## C8.2 参考片段结构
+
+`walk_6m_straight_line06`：14.90 s / 1491 帧，路径总长 9.67 m。结构为
+**走 1.5 m → 180° 转身 → 直走 6 m（约 1.0 m/s）→ 再次转身返回**。
+前 10 s：路径 7.52 m，均速 0.752 m/s。参考骨盆高度 0.912–0.969 m，触地事件 13/10（左/右）。
+
+## C8.3 stochastic 20 种子结果
+
+```bash
+PYTHONPATH=external/MuscleMimic:scripts .venv/bin/python scripts/eval_walk.py \
+  --checkpoint artifacts/checkpoints/checkpoint_12500 \
+  --motion_path KIT/3/walk_6m_straight_line06_poses \
+  --mode stochastic --seeds $(seq 0 19) --out_dir runs/C_acceptance_long
+# 并用 --horizon 3000 复跑一次（见 C8.4）→ runs/C_acceptance_long_h3000
+```
+
+**结果：3/20 满足全部判据（目标 18/20）→ 未通过。**
+但 20/20 都跑满 10.00 s 且**没有跌倒**。
+
+| 指标（20 seeds） | mean | min | max |
+|---|---:|---:|---:|
+| 时长 (s) | 10.00 | 10.00 | 10.00 |
+| 结束条件 | 20/20 `time_limit_success`（到达 10 s 窗口），0 跌倒/数值异常/隐式 reset | — | — |
+| 前进速度 (m/s) | 0.668 | 0.634 | 0.700 ✓ |
+| **最大侧偏 (m)** | **0.582** | 0.271 | **1.192** ✗（17/20 超 0.35） |
+| 骨盆倾角 max (°) | 16.6 | 16.0 | 17.3 ✓ |
+| 躯干倾角 max (°) | 37.2 | 36.6 | 37.7 ✓ |
+| 根高 min (m) | 0.902 | 0.890 | 0.907 ✓ |
+| 触地事件 / episode | 22.1 | 19 | 26 |
+| 足滑移 / 前进距离 (左/右) | 0.083 / 0.078 | — | — |
+
+**唯一失败判据是 `max_lateral_le_0.35`。** 通过侧偏的 3 个 seed：0（0.333）、7（0.329）、18（0.271）。
+
+逐种子：`reports/table_10s_long.md`
+
+## C8.4 排除“horizon 恰好 10 s”的巧合
+
+checkpoint 训练配置的 `horizon=1000` 控制步 = 正好 10.0 s，会与判据同时到界。为避免把"环境截断"
+当成"存活 10 s"，用 `--horizon 3000` 复跑 20 seed：全部仍在 **1000 步 / 10.00 s** 停止
+（即由本脚本自己的 10 s 时钟停止，不是环境 horizon），结果完全一致（3/20，侧偏分布相同）。
+`n_control_steps` 均为 1000，`horizon_reached=True` 仅在默认 horizon 下成立。
+
+## C8.5 失败定位：转弯半径过大 → 全程平行偏移
+
+用"策略骨盆到参考折线的真实最近距离"（与指标无关的地面真值）分段统计（t<4.2 s 为转身段）：
+
+| 分段 | 平均最大偏离 | ≤0.35 m 的 seed 数 |
+|---|---:|---:|
+| 转身段（0–4.2 s） | 0.347 m | 14/20 |
+| 直行段（4.2–10 s） | 0.495 m | 5/20 |
+
+即：**不是走不动、也不是跌倒**。策略在 180° 转身时转弯半径偏大，转完后沿参考的**平行线**行走，
+横向偏移被完整保留（例如 seed 10：t=9 s 时 root=(−4.10, 0.48)，ref=(−3.45, −0.41)，真实路径距离 1.10 m）。
+指标与地面真值一致（seed 10：`max_lateral_deviation`=1.192 vs 折线距离 1.220 m），说明侧偏不是度量伪影。
+
+对照（无 180° 转身的片段，20 seeds）：
+
+| 片段 | 时长 | v_fwd | 侧偏 mean [min,max] | 超 0.35 的 seed |
+|---|---:|---:|---|---:|
+| walking_medium09 | 7.72 s | 0.327 | 0.151 [0.065, 0.275] | 0/20 |
+| walk_6m_straight_line04 | 7.35 s | 0.782 | 0.314 [0.172, 0.446] | 7/20 |
+| WalkInCounterClockwiseCircle04 | 8.39 s | 0.514 | 0.295 [0.178, 0.568] | 6/20 |
+| **walk_6m_straight_line06（10 s 验收）** | **14.90 s** | **0.668** | **0.582 [0.271, 1.192]** | **17/20** |
+
+速度越高、转向越急，横向跟踪越差；这与"策略不是速度不足，而是转弯执行不足"一致。
+
+## C8.6 视频（与日志时间轴一一对应）
+
+| 文件 | seed | 结果 | 时长/帧 |
+|---|---|---|---|
+| `reports/video/10s_walk_6m_straight_line06_seed0_SUCCESS.mp4` | 0 | 通过（侧偏 0.333 m） | 10.0 s / 200 帧 @20 fps |
+| `reports/video/10s_walk_6m_straight_line06_seed10_LATERAL_FAIL.mp4` | 10 | 侧偏失败（1.192 m） | 10.0 s / 200 帧 @20 fps |
+
+每 5 个控制步渲染一帧，画面叠加**真实** `step`、`t = data.time − reset_time`、瞬时骨盆/躯干倾角；
+对应轨迹 `runs/C_video_10s/stochastic/stochastic_seed{0,10}.npz`。
+
+## C8.7 协议修订（指标，非模型）
+
+`max_lateral_from_reference` 原先投影在**初始朝向**坐标系上，对转向参考不是旋转不变的
+（正确跟踪 180° 转身也会判成"侧偏"）。在跑 10 s 验收**之前**改为旋转不变的
+`max_cross_track_from_reference`（投影在**瞬时**参考法向），判据改为
+`max_lateral_deviation = max(侧滑积分, 瞬时法向偏差)`。旧定义保留为诊断字段
+`max_lateral_from_reference_initial_frame`。协议版本 1.0 → 1.1，变更记录见 `configs/eval_walk.json`。
+副作用：曲线片段更严格（circle 由 0.176 → 0.280，超阈值 seed 由 2 → 6）。

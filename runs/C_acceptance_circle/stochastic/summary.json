@@ -52,8 +52,9 @@
     "net_speed": 0.017016215876973956,
     "forward_distance": 4.353914647604653,
     "max_lateral_offset": 0.08538181868585855,
-    "max_lateral_from_reference": 0.15186092432911333,
-    "max_lateral_deviation": 0.15186092432911333,
+    "max_lateral_from_reference_initial_frame": 0.15186092432911333,
+    "max_cross_track_from_reference": 0.18064486520619633,
+    "max_lateral_deviation": 0.18064486520619633,
     "max_tilt_pelvis_deg": 11.711820215311715,
     "max_tilt_torso_deg": 33.20473928725638,
     "min_root_height": 0.8883731454234275,
@@ -84,9 +85,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 13.254452228546143,
-    "build_time_s": 2.488032341003418,
-    "max_rss_mb": 2509.578125
+    "wall_time_s": 13.403843879699707,
+    "build_time_s": 2.311405658721924,
+    "max_rss_mb": 2487.96484375
   },
   {
     "seed": 1,
@@ -142,7 +143,8 @@
     "net_speed": 0.06353335287096804,
     "forward_distance": 4.301400327018583,
     "max_lateral_offset": 0.42561743458694146,
-    "max_lateral_from_reference": 0.24572564985675877,
+    "max_lateral_from_reference_initial_frame": 0.24572564985675877,
+    "max_cross_track_from_reference": 0.29836705242415623,
     "max_lateral_deviation": 0.42561743458694146,
     "max_tilt_pelvis_deg": 11.081312893121492,
     "max_tilt_torso_deg": 32.80198066917741,
@@ -174,9 +176,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.801586627960205,
-    "build_time_s": 1.6877129077911377,
-    "max_rss_mb": 2733.98828125
+    "wall_time_s": 13.20711612701416,
+    "build_time_s": 1.7089557647705078,
+    "max_rss_mb": 2758.625
   },
   {
     "seed": 2,
@@ -231,8 +233,9 @@
     "net_speed": 0.01661986584826415,
     "forward_distance": 4.473925636854157,
     "max_lateral_offset": 0.11541612505377495,
-    "max_lateral_from_reference": 0.14210581943523015,
-    "max_lateral_deviation": 0.14210581943523015,
+    "max_lateral_from_reference_initial_frame": 0.14210581943523015,
+    "max_cross_track_from_reference": 0.1868023861714845,
+    "max_lateral_deviation": 0.1868023861714845,
     "max_tilt_pelvis_deg": 11.943747396661397,
     "max_tilt_torso_deg": 32.756886795237044,
     "min_root_height": 0.8900816328342472,
@@ -263,9 +266,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.876683235168457,
-    "build_time_s": 1.8570542335510254,
-    "max_rss_mb": 2925.921875
+    "wall_time_s": 13.113112688064575,
+    "build_time_s": 1.9206881523132324,
+    "max_rss_mb": 2855.56640625
   },
   {
     "seed": 3,
@@ -320,7 +323,8 @@
     "net_speed": 0.010165785652272476,
     "forward_distance": 4.302361978074812,
     "max_lateral_offset": 0.2524411459016944,
-    "max_lateral_from_reference": 0.1603252692084826,
+    "max_lateral_from_reference_initial_frame": 0.1603252692084826,
+    "max_cross_track_from_reference": 0.25223343405798976,
     "max_lateral_deviation": 0.2524411459016944,
     "max_tilt_pelvis_deg": 10.92670149237793,
     "max_tilt_torso_deg": 32.5752418875652,
@@ -352,9 +356,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.863194227218628,
-    "build_time_s": 1.8622078895568848,
-    "max_rss_mb": 2971.4140625
+    "wall_time_s": 13.796855688095093,
+    "build_time_s": 1.9194612503051758,
+    "max_rss_mb": 3007.8984375
   },
   {
     "seed": 4,
@@ -381,15 +385,16 @@
       "no_reset_or_state_override": true,
       "reference_not_ended": false,
       "avg_forward_speed_ge_0.6": false,
-      "max_lateral_le_0.35": true,
+      "max_lateral_le_0.35": false,
       "max_tilt_le_45": true
     },
     "blocking_criteria": [
       "duration_ge_10s",
       "reference_not_ended",
-      "avg_forward_speed_ge_0.6"
+      "avg_forward_speed_ge_0.6",
+      "max_lateral_le_0.35"
     ],
-    "clip_completed_without_failure": true,
+    "clip_completed_without_failure": false,
     "walking_window_s": [
       0.05000000000000003,
       7.4599999999994
@@ -409,8 +414,9 @@
     "net_speed": 0.05159863794145456,
     "forward_distance": 4.405790088112109,
     "max_lateral_offset": 0.09182877171086772,
-    "max_lateral_from_reference": 0.17350573999418967,
-    "max_lateral_deviation": 0.17350573999418967,
+    "max_lateral_from_reference_initial_frame": 0.17350573999418967,
+    "max_cross_track_from_reference": 0.3898090430125491,
+    "max_lateral_deviation": 0.3898090430125491,
     "max_tilt_pelvis_deg": 10.911956613854004,
     "max_tilt_torso_deg": 33.27366310453498,
     "min_root_height": 0.8859306842358106,
@@ -441,9 +447,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.727041482925415,
-    "build_time_s": 1.664278507232666,
-    "max_rss_mb": 3059.22265625
+    "wall_time_s": 13.078920364379883,
+    "build_time_s": 1.9068996906280518,
+    "max_rss_mb": 3118.515625
   },
   {
     "seed": 5,
@@ -498,8 +504,9 @@
     "net_speed": 0.027744309254416073,
     "forward_distance": 4.260709017391296,
     "max_lateral_offset": 0.12285244088689899,
-    "max_lateral_from_reference": 0.18015354916909176,
-    "max_lateral_deviation": 0.18015354916909176,
+    "max_lateral_from_reference_initial_frame": 0.18015354916909176,
+    "max_cross_track_from_reference": 0.22212256076307482,
+    "max_lateral_deviation": 0.22212256076307482,
     "max_tilt_pelvis_deg": 11.308134585216367,
     "max_tilt_torso_deg": 32.73372091075231,
     "min_root_height": 0.8896756865751231,
@@ -530,9 +537,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.991004228591919,
-    "build_time_s": 1.839341640472412,
-    "max_rss_mb": 3174.44921875
+    "wall_time_s": 13.313553810119629,
+    "build_time_s": 1.7335660457611084,
+    "max_rss_mb": 3248.296875
   },
   {
     "seed": 6,
@@ -588,7 +595,8 @@
     "net_speed": 0.019983344146788297,
     "forward_distance": 4.249446471817455,
     "max_lateral_offset": 0.38035821411206716,
-    "max_lateral_from_reference": 0.19979297126133536,
+    "max_lateral_from_reference_initial_frame": 0.19979297126133536,
+    "max_cross_track_from_reference": 0.21043396040111245,
     "max_lateral_deviation": 0.38035821411206716,
     "max_tilt_pelvis_deg": 10.487724794567791,
     "max_tilt_torso_deg": 32.89848797209,
@@ -620,9 +628,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.837181091308594,
-    "build_time_s": 1.8272104263305664,
-    "max_rss_mb": 3292.28125
+    "wall_time_s": 13.059829473495483,
+    "build_time_s": 1.9876489639282227,
+    "max_rss_mb": 3301.5234375
   },
   {
     "seed": 7,
@@ -677,8 +685,9 @@
     "net_speed": 0.03739180972997148,
     "forward_distance": 4.271590072237702,
     "max_lateral_offset": 0.2285955427663615,
-    "max_lateral_from_reference": 0.31865134967235936,
-    "max_lateral_deviation": 0.31865134967235936,
+    "max_lateral_from_reference_initial_frame": 0.31865134967235936,
+    "max_cross_track_from_reference": 0.3396016872732942,
+    "max_lateral_deviation": 0.3396016872732942,
     "max_tilt_pelvis_deg": 10.349914651529144,
     "max_tilt_torso_deg": 32.13354249288178,
     "min_root_height": 0.8882248276145529,
@@ -709,9 +718,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.76143765449524,
-    "build_time_s": 1.677882432937622,
-    "max_rss_mb": 3363.8515625
+    "wall_time_s": 12.912418127059937,
+    "build_time_s": 1.8867194652557373,
+    "max_rss_mb": 3383.42578125
   },
   {
     "seed": 8,
@@ -738,15 +747,16 @@
       "no_reset_or_state_override": true,
       "reference_not_ended": false,
       "avg_forward_speed_ge_0.6": false,
-      "max_lateral_le_0.35": true,
+      "max_lateral_le_0.35": false,
       "max_tilt_le_45": true
     },
     "blocking_criteria": [
       "duration_ge_10s",
       "reference_not_ended",
-      "avg_forward_speed_ge_0.6"
+      "avg_forward_speed_ge_0.6",
+      "max_lateral_le_0.35"
     ],
-    "clip_completed_without_failure": true,
+    "clip_completed_without_failure": false,
     "walking_window_s": [
       0.05000000000000003,
       7.349999999999413
@@ -766,8 +776,9 @@
     "net_speed": 0.05029486267538082,
     "forward_distance": 4.177021819327268,
     "max_lateral_offset": 0.1585665380868492,
-    "max_lateral_from_reference": 0.20911762223436278,
-    "max_lateral_deviation": 0.20911762223436278,
+    "max_lateral_from_reference_initial_frame": 0.20911762223436278,
+    "max_cross_track_from_reference": 0.40108796241458017,
+    "max_lateral_deviation": 0.40108796241458017,
     "max_tilt_pelvis_deg": 11.462328537362596,
     "max_tilt_torso_deg": 32.637271021273335,
     "min_root_height": 0.888084482941267,
@@ -798,9 +809,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.854425191879272,
-    "build_time_s": 1.668459177017212,
-    "max_rss_mb": 3451.78125
+    "wall_time_s": 13.019641637802124,
+    "build_time_s": 1.676889419555664,
+    "max_rss_mb": 3436.36328125
   },
   {
     "seed": 9,
@@ -855,8 +866,9 @@
     "net_speed": 0.03240830788234387,
     "forward_distance": 4.349742886685666,
     "max_lateral_offset": 0.1290257909897662,
-    "max_lateral_from_reference": 0.10711055886629085,
-    "max_lateral_deviation": 0.1290257909897662,
+    "max_lateral_from_reference_initial_frame": 0.10711055886629085,
+    "max_cross_track_from_reference": 0.18720002258837476,
+    "max_lateral_deviation": 0.18720002258837476,
     "max_tilt_pelvis_deg": 11.436862949613268,
     "max_tilt_torso_deg": 32.62747738873953,
     "min_root_height": 0.8878060343284829,
@@ -887,9 +899,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.681401014328003,
-    "build_time_s": 1.6717767715454102,
-    "max_rss_mb": 3545.16796875
+    "wall_time_s": 12.957103967666626,
+    "build_time_s": 1.7102644443511963,
+    "max_rss_mb": 3503.0625
   },
   {
     "seed": 10,
@@ -916,15 +928,16 @@
       "no_reset_or_state_override": true,
       "reference_not_ended": false,
       "avg_forward_speed_ge_0.6": false,
-      "max_lateral_le_0.35": true,
+      "max_lateral_le_0.35": false,
       "max_tilt_le_45": true
     },
     "blocking_criteria": [
       "duration_ge_10s",
       "reference_not_ended",
-      "avg_forward_speed_ge_0.6"
+      "avg_forward_speed_ge_0.6",
+      "max_lateral_le_0.35"
     ],
-    "clip_completed_without_failure": true,
+    "clip_completed_without_failure": false,
     "walking_window_s": [
       0.04000000000000002,
       7.409999999999406
@@ -944,8 +957,9 @@
     "net_speed": 0.0792344758154656,
     "forward_distance": 4.260341487291602,
     "max_lateral_offset": 0.19569462851430935,
-    "max_lateral_from_reference": 0.15571356485692006,
-    "max_lateral_deviation": 0.19569462851430935,
+    "max_lateral_from_reference_initial_frame": 0.15571356485692006,
+    "max_cross_track_from_reference": 0.5675361368374127,
+    "max_lateral_deviation": 0.5675361368374127,
     "max_tilt_pelvis_deg": 10.905407069052274,
     "max_tilt_torso_deg": 32.43193768555377,
     "min_root_height": 0.8840079422197492,
@@ -976,9 +990,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.791645765304565,
-    "build_time_s": 1.8171732425689697,
-    "max_rss_mb": 3642.98046875
+    "wall_time_s": 13.11512303352356,
+    "build_time_s": 1.891632080078125,
+    "max_rss_mb": 3571.02734375
   },
   {
     "seed": 11,
@@ -1033,8 +1047,9 @@
     "net_speed": 0.028965414155812826,
     "forward_distance": 4.2755683259365584,
     "max_lateral_offset": 0.1222777282114378,
-    "max_lateral_from_reference": 0.15239189386808322,
-    "max_lateral_deviation": 0.15239189386808322,
+    "max_lateral_from_reference_initial_frame": 0.15239189386808322,
+    "max_cross_track_from_reference": 0.2184283506110411,
+    "max_lateral_deviation": 0.2184283506110411,
     "max_tilt_pelvis_deg": 11.039347746391769,
     "max_tilt_torso_deg": 32.86769317455286,
     "min_root_height": 0.8899043055735909,
@@ -1065,9 +1080,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.73896861076355,
-    "build_time_s": 1.893479585647583,
-    "max_rss_mb": 3706.84375
+    "wall_time_s": 12.898250102996826,
+    "build_time_s": 1.689197063446045,
+    "max_rss_mb": 3668.71875
   },
   {
     "seed": 12,
@@ -1122,8 +1137,9 @@
     "net_speed": 0.024242509901272708,
     "forward_distance": 4.35377585084457,
     "max_lateral_offset": 0.13363356414779412,
-    "max_lateral_from_reference": 0.18610368871820945,
-    "max_lateral_deviation": 0.18610368871820945,
+    "max_lateral_from_reference_initial_frame": 0.18610368871820945,
+    "max_cross_track_from_reference": 0.22432362841459466,
+    "max_lateral_deviation": 0.22432362841459466,
     "max_tilt_pelvis_deg": 10.453305790753264,
     "max_tilt_torso_deg": 31.573051289081665,
     "min_root_height": 0.8845912819299941,
@@ -1154,9 +1170,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.515848398208618,
-    "build_time_s": 1.670309066772461,
-    "max_rss_mb": 3804.78125
+    "wall_time_s": 12.77693247795105,
+    "build_time_s": 1.884641170501709,
+    "max_rss_mb": 3741.37109375
   },
   {
     "seed": 13,
@@ -1211,8 +1227,9 @@
     "net_speed": 0.016745303790373436,
     "forward_distance": 4.237041506769231,
     "max_lateral_offset": 0.19418489551338933,
-    "max_lateral_from_reference": 0.11825720604759077,
-    "max_lateral_deviation": 0.19418489551338933,
+    "max_lateral_from_reference_initial_frame": 0.11825720604759077,
+    "max_cross_track_from_reference": 0.25259216466734047,
+    "max_lateral_deviation": 0.25259216466734047,
     "max_tilt_pelvis_deg": 11.106665385025972,
     "max_tilt_torso_deg": 32.231555704758485,
     "min_root_height": 0.8876471614180307,
@@ -1243,9 +1260,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.447441577911377,
-    "build_time_s": 1.8920092582702637,
-    "max_rss_mb": 3905.69140625
+    "wall_time_s": 13.051269769668579,
+    "build_time_s": 1.8893158435821533,
+    "max_rss_mb": 3781.96875
   },
   {
     "seed": 14,
@@ -1300,8 +1317,9 @@
     "net_speed": 0.047317186556421635,
     "forward_distance": 4.380135093655914,
     "max_lateral_offset": 0.10706870171946599,
-    "max_lateral_from_reference": 0.24494880757548432,
-    "max_lateral_deviation": 0.24494880757548432,
+    "max_lateral_from_reference_initial_frame": 0.24494880757548432,
+    "max_cross_track_from_reference": 0.26797126269399835,
+    "max_lateral_deviation": 0.26797126269399835,
     "max_tilt_pelvis_deg": 11.370089196567486,
     "max_tilt_torso_deg": 32.82348040396522,
     "min_root_height": 0.8926808313677081,
@@ -1332,9 +1350,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.718478679656982,
-    "build_time_s": 1.865142822265625,
-    "max_rss_mb": 3980.71484375
+    "wall_time_s": 12.990781307220459,
+    "build_time_s": 1.8428270816802979,
+    "max_rss_mb": 3886.3125
   },
   {
     "seed": 15,
@@ -1389,8 +1407,9 @@
     "net_speed": 0.05375745377556879,
     "forward_distance": 4.359469958497532,
     "max_lateral_offset": 0.2937444307643831,
-    "max_lateral_from_reference": 0.21895500158145353,
-    "max_lateral_deviation": 0.2937444307643831,
+    "max_lateral_from_reference_initial_frame": 0.21895500158145353,
+    "max_cross_track_from_reference": 0.3343873011348099,
+    "max_lateral_deviation": 0.3343873011348099,
     "max_tilt_pelvis_deg": 10.561886445614759,
     "max_tilt_torso_deg": 32.81001848377264,
     "min_root_height": 0.8804152479822406,
@@ -1421,9 +1440,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 13.167249202728271,
-    "build_time_s": 1.711292028427124,
-    "max_rss_mb": 4065.5546875
+    "wall_time_s": 13.091821908950806,
+    "build_time_s": 1.9021179676055908,
+    "max_rss_mb": 3990.62109375
   },
   {
     "seed": 16,
@@ -1450,15 +1469,16 @@
       "no_reset_or_state_override": true,
       "reference_not_ended": false,
       "avg_forward_speed_ge_0.6": false,
-      "max_lateral_le_0.35": true,
+      "max_lateral_le_0.35": false,
       "max_tilt_le_45": true
     },
     "blocking_criteria": [
       "duration_ge_10s",
       "reference_not_ended",
-      "avg_forward_speed_ge_0.6"
+      "avg_forward_speed_ge_0.6",
+      "max_lateral_le_0.35"
     ],
-    "clip_completed_without_failure": true,
+    "clip_completed_without_failure": false,
     "walking_window_s": [
       0.04000000000000002,
       7.379999999999409
@@ -1478,8 +1498,9 @@
     "net_speed": 0.05473377143218355,
     "forward_distance": 4.245858180817498,
     "max_lateral_offset": 0.20410872169787925,
-    "max_lateral_from_reference": 0.3470512681768302,
-    "max_lateral_deviation": 0.3470512681768302,
+    "max_lateral_from_reference_initial_frame": 0.3470512681768302,
+    "max_cross_track_from_reference": 0.3875485283004558,
+    "max_lateral_deviation": 0.3875485283004558,
     "max_tilt_pelvis_deg": 11.3457094099044,
     "max_tilt_torso_deg": 32.12960108552576,
     "min_root_height": 0.8862562212174536,
@@ -1510,9 +1531,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 13.103266954421997,
-    "build_time_s": 1.7022731304168701,
-    "max_rss_mb": 4097.3515625
+    "wall_time_s": 12.922680377960205,
+    "build_time_s": 1.692098617553711,
+    "max_rss_mb": 4074.3984375
   },
   {
     "seed": 17,
@@ -1567,8 +1588,9 @@
     "net_speed": 0.017533537884158876,
     "forward_distance": 4.314392413537938,
     "max_lateral_offset": 0.07842231101270347,
-    "max_lateral_from_reference": 0.056888838035182715,
-    "max_lateral_deviation": 0.07842231101270347,
+    "max_lateral_from_reference_initial_frame": 0.056888838035182715,
+    "max_cross_track_from_reference": 0.21446905775224134,
+    "max_lateral_deviation": 0.21446905775224134,
     "max_tilt_pelvis_deg": 11.85435365677138,
     "max_tilt_torso_deg": 32.544724772117746,
     "min_root_height": 0.8929296696277568,
@@ -1599,9 +1621,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 13.395428657531738,
-    "build_time_s": 1.6921043395996094,
-    "max_rss_mb": 4179.03125
+    "wall_time_s": 13.041242599487305,
+    "build_time_s": 1.6745719909667969,
+    "max_rss_mb": 4141.2109375
   },
   {
     "seed": 18,
@@ -1656,8 +1678,9 @@
     "net_speed": 0.04372757945613174,
     "forward_distance": 4.2338896371920915,
     "max_lateral_offset": 0.14566102018873958,
-    "max_lateral_from_reference": 0.2261414399881419,
-    "max_lateral_deviation": 0.2261414399881419,
+    "max_lateral_from_reference_initial_frame": 0.2261414399881419,
+    "max_cross_track_from_reference": 0.2924294427122571,
+    "max_lateral_deviation": 0.2924294427122571,
     "max_tilt_pelvis_deg": 10.902465985563676,
     "max_tilt_torso_deg": 32.099704990930576,
     "min_root_height": 0.8936121062962694,
@@ -1688,9 +1711,9 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.68545651435852,
-    "build_time_s": 1.6762700080871582,
-    "max_rss_mb": 4261.921875
+    "wall_time_s": 13.386929273605347,
+    "build_time_s": 1.8650214672088623,
+    "max_rss_mb": 4234.02734375
   },
   {
     "seed": 19,
@@ -1745,8 +1768,9 @@
     "net_speed": 0.020062262519383884,
     "forward_distance": 4.3708055510930395,
     "max_lateral_offset": 0.0519030527471535,
-    "max_lateral_from_reference": 0.18458945130535703,
-    "max_lateral_deviation": 0.18458945130535703,
+    "max_lateral_from_reference_initial_frame": 0.18458945130535703,
+    "max_cross_track_from_reference": 0.17839876116147227,
+    "max_lateral_deviation": 0.17839876116147227,
     "max_tilt_pelvis_deg": 11.022775184491652,
     "max_tilt_torso_deg": 32.725374920410495,
     "min_root_height": 0.8864559050378608,
@@ -1777,8 +1801,8 @@
     "ref_start_step": 0,
     "ref_end_step": 839,
     "ref_end_phase": 1.0,
-    "wall_time_s": 12.853763580322266,
-    "build_time_s": 1.7327008247375488,
-    "max_rss_mb": 4308.5
+    "wall_time_s": 12.96618366241455,
+    "build_time_s": 1.8765578269958496,
+    "max_rss_mb": 4281.4921875
   }
 ]

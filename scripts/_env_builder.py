@@ -54,6 +54,7 @@ def build_eval_bundle(
     strict_termination: bool = False,
     terminal_state_type: str | None = None,
     terminal_state_params: dict[str, float] | None = None,
+    horizon: int | None = None,
 ) -> EvalBundle:
     _resolve_hf_endpoint()
 
@@ -63,6 +64,11 @@ def build_eval_bundle(
 
     # Evaluation-time overrides that the official entrypoint performs.
     config.experiment.env_params["headless"] = True
+    if horizon is not None:
+        # The checkpoint was trained with horizon=1000 control steps, which is
+        # exactly 10.0 s at dt=0.01. Raising it lets the acceptance criterion be
+        # our own 10 s clock instead of the environment's training truncation.
+        config.experiment.env_params["horizon"] = int(horizon)
     apply_trajectory_selection(config, traj_index, start_step)
     config.experiment.env_params.th_params["start_from_random_step"] = False
     apply_temporal_params(config)

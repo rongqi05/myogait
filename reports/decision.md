@@ -1,71 +1,89 @@
 # 决策：MyoFullBody + MuscleMimic 能否作为正常人行走基线
 
-日期：2026-10-29
-冻结配置：`configs/eval_walk.json`
-证据：`reports/A_environment_audit.md`、`reports/B_reproduction.md`、
-`reports/C_acceptance.md`、`reports/D_model_version_compatibility.md`、`reports/*.json|csv|md`
+日期：2026-10-29（更新：取得完整数据集访问后完成 10 s 验收）
+冻结配置：`configs/eval_walk.json`（协议 v1.1）
+证据：`reports/A_environment_audit.md`、`B_reproduction.md`、`C_acceptance.md`、
+`D_model_version_compatibility.md`、`reports/*.json|csv|md`、`reports/video/`
 
 ## 结论
 
-> **因数据不足无法判定（10 s / 0.6 m/s 验收）。**
+> **未通过 10 s 验收（3/20，目标 18/20）。**
 >
-> 在**本地可获得的全部**参考片段上，官方 checkpoin 与 1.0.5 模型包可以稳定、无跌倒地走完整条
-> 参考（walking_medium09：20/20；circle：20/20），但没有任何一条可用片段达到 10 s，且没有一条
-> 片段的平均速度达到 0.6 m/s。因此“10 s 连续正常行走基线”这一门槛**尚未被验证**，既不能判通过，
-> 也不是策略失败。
+> 冻结的模型、配置、checkpoint 与评价代码下，在数据集中**唯一**满足"时长 ≥10 s 且前 10 s 参考
+> 速度 ≥0.6 m/s"的行走片段（`KIT/3/walk_6m_straight_line06`，14.90 s）上：
+> **20/20 跑满 10.00 s、20/20 无物理跌倒、速度/倾角/根高全部达标**，
+> 但 **17/20 的最大侧偏 >0.35 m**（最大 1.19 m），只有 3 个 seed 满足全部判据。
+>
+> 失败模式**不是跌倒或走不动**，而是**180° 转身时转弯半径偏大，转完后沿参考平行线行走**，
+> 横向偏移被保留。因此该策略目前不能直接作为"正常人 10 s 连续行走的动态基线"，
+> 但可以作为**短距离直行基线**（7.72 s 直行片段：20/20 侧偏 ≤0.275 m）。
 
 | 子问题 | 结论 | 依据 |
 |---|---|---|
-| 官方策略能否在官方 demo 上正常走（不跌倒） | **通过（stochastic）** | 20/20 走完 7.72 s，根高 ≥0.883 m，骨盆倾角 ≤9.5° |
-| 除 10 s/速度外的其余判据 | **通过（stochastic 20/20；circle 18/20）** | 侧偏 ≤0.258 m（walk），≤0.426 m（circle 有 2 个 seed 超 0.35） |
-| deterministic 模式 | **未通过侧偏判据** | 20/20 不跌倒，但横向漂移 0.606 m |
-| 最长可验证的连续行走 | **8.39 s**（circle 片段） | 20/20 clip_end，速度 0.514 m/s |
-| 10 s 连续行走 | **未验证** | 无 ≥10 s 片段；最长 8.39 s |
-| 平均速度 ≥0.6 m/s | **未验证（参考本身就不达标）** | walking_medium09 参考 0.335 m/s；circle 0.575 m/s |
-| “官方 checkpoint 回放会跌倒” | **可复现，原因是模型包版本不匹配** | 1.0.6：3/3 在 2.5–2.8 s 跌倒；1.0.5：3/3 正常；单因子回退腿文件后恢复 |
-| 是否修改了奖励/模型/观测/肌肉力量 | **没有** | 只固定了 `musclemimic_models==1.0.5` |
+| 10 s 连续行走（全部判据） | **未通过 3/20** | `reports/table_10s_long.md` |
+| 10 s 内不跌倒 | **通过 20/20** | 根高 min 0.890 m，骨盆倾角 ≤17.3°，无 numeric anomaly |
+| 10 s 平均前进速度 ≥0.6 m/s | **通过 20/20** | 0.634–0.700 m/s |
+| 10 s 最大侧偏 ≤0.35 m | **未通过 17/20** | 0.271–1.192 m |
+| 倾斜/根高判据 | **通过 20/20** | ≤37.7° / ≥0.890 m |
+| 短距离直行（7.72 s） | 通过 20/20 | 侧偏 ≤0.275 m，速度 0.328（参考 0.335） |
+| 之前"回放会倒" | 已定位为 `musclemimic_models` 1.0.6 | 见 D 报告 |
 
-### 为什么不是“未通过”
+### 为什么这次是"未通过"而不是"数据不足"
 
-判据里“未通过”的含义应是“在满足数据前提的协议下，策略失败”。当前：
+取得访问后，数据集里有 1190 条动作，但：
+- **只有 1 条** ≥10 s（14.90 s），且属于**训练组**——因此 10 s 结果是 **in-sample**，偏乐观；
+- 官方 testing 组最长 8.53 s，物理上无法满足 10 s。
 
-- stochastic 20/20 个独立 episode 都**没有** physical_fall / numeric_anomaly / reset_or_state_override；
-- 20/20 都在参考结束时才停下（`clip_end`），倾角、侧偏（≤0.258 m）、根高全部满足阈值；
-- 阻塞项只有 `duration_ge_10s`、`reference_not_ended`、`avg_forward_speed_ge_0.6`，
-  这三项都直接由参考片段长度/速度决定，策略跟踪误差只有 0.007 m/s（0.328 vs 0.335）；
-- deterministic 模式另有一个真实缺陷（0.61 m 横向漂移），但它不影响 stochastic 的结论，
-  也不能用“数据不足”掩盖——已单独记录为 `C_acceptance.md` C.4 的未通过项。
+前置条件已经满足，验收**已经执行**，所以结论是"未通过"，不是"无法判定"。
+但同时必须承认这不是 out-of-sample 证据：策略在训练集片段上仍未通过侧偏判据，说明该缺陷是真实的。
 
-所以是**数据前提不满足**，而不是策略不达标。
+### 失败根因（已定位到状态量，不依赖最终画面）
 
-## 下一步（需要用户动作）：取得 ≥10 s 的 walking 参考
+- 转身段（0–4.2 s）到参考路径的最大距离平均 0.347 m，14/20 仍在 0.35 m 内；
+- 直行段（4.2–10 s）平均 0.495 m，仅 5/20 在 0.35 m 内 → 偏移在转身时产生并被保留；
+- seed 10：t=9 s 时 root=(−4.10, 0.48)，ref=(−3.45, −0.41)，到路径真值 1.10 m；
+- 指标与"到参考折线的最近距离"一致（1.192 vs 1.220 m），排除度量伪影；
+- 三个通过 seed（0/7/18）的共同点：转身更贴参考。
 
-唯一缺口是参考片段。官方完整重定向数据集中已有满足长度的动作，例如
-`MyoFullBody/gmr/KIT/3/walk_6m_straight_line06_poses.npz`（12,039,580 B ≈ 1487 帧 ≈ 14.9 s），
-但 `amathislab/musclemimic-retargeted` 是 gated 数据集，本机 token 访问返回 403。
+### 与官方评测口径的差异（已核实）
 
-用户需要在该数据集页面点击 “I agree and request access”（auto-approve，只需一次），然后：
+- 官方 `--n_steps 1000` 是**跨 episode 总预算**，跌倒/片段结束后自动 reset 并继续计时，
+  不能当作"连续 10 s"。
+- 官方 eval 默认终止器（`MeanRelativeSiteDeviationTerminalStateHandler`, 0.5 m）**不含跌倒检查**。
+- `--eval_seed` 在回放路径上**不生效**（内部固定 `key(0)`）。本脚本自己传 RNG 种子。
+- checkpoint 的 `horizon=1000` 步 = 正好 10.0 s；已用 `--horizon 3000` 复跑，确认 10 s 由本脚本
+  的时钟判定而非环境截断，结果不变。
 
-```bash
-HF_ENDPOINT=https://hf-mirror.com .venv/bin/python - <<'PY'
-from huggingface_hub import snapshot_download
-snapshot_download("amathislab/musclemimic-retargeted", repo_type="dataset",
-                  local_dir="artifacts/motions/retargeted",
-                  allow_patterns=["MyoFullBody/gmr/KIT/3/walk_6m_straight_line06_poses.npz"])
-PY
-# 放到 gmr 缓存，供官方 loader 使用
-mkdir -p ~/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/3
-cp artifacts/motions/retargeted/MyoFullBody/gmr/KIT/3/walk_6m_straight_line06_poses.npz \
-   ~/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/3/
-# 重新做 20 seed 验收（协议/阈值/代码都不变）
-PYTHONPATH=external/MuscleMimic:scripts .venv/bin/python scripts/eval_walk.py \
-  --mode stochastic --seeds $(seq 0 19) \
-  --motion_path KIT/3/walk_6m_straight_line06_poses --out_dir runs/C_acceptance_long
-```
+## 下一步
 
-下载后先跑 `scripts/motion_stats.py`，确认该片段 (a) ≥10 s、(b) 全片段平均速度 ≥0.6 m/s。
-如果片段仍含较长站立段导致平均速度不足，则把“平均速度”改为**行走窗口内**的速度（脚本已同时输出
-`walking_window_forward_speed`），并在报告中明确口径，不要修改 10 s 时长判据。
+### 立即可做（不需要重新训练）
+
+1. **把基线定位为"短距离直行"**：用 `walking_medium09`（7.72 s）或
+   `WalkInCounterClockwiseCircle04`（8.39 s）作为可用的健康人参照，明确标注时长上限。
+2. 申请/生成**≥10 s 的直线行走参考**（这是数据侧问题）：官方 testing 组没有；可考虑用 GMR 自行
+   重定向一段 ≥10 s 的 AMASS/KIT 直线行走，再重跑同一协议。
+3. 若坚持用现有 14.9 s 片段做偏瘫对比，可把"侧偏"判据放宽或改为
+   "相对自身的横向前进占比"，但**必须在报告中同时给出 0.35 m 口径的结果**，不能只报放宽后的。
+
+### 需要重新训练才能做的（下一阶段）
+
+见下文"患侧 F0 缩放与拐杖接触"，本次未实现。
+
+## 附：取得访问后的 10 s 验收（已执行）
+
+一键脚本：`bash scripts/after_access_10s.sh`（下载 → 前置校验 → 20 seed 验收）。
+本次实际执行的步骤：
+
+1. 从 `amathislab/musclemimic-retargeted` 下载 `KIT/3/walk_6m_straight_line06_poses.npz`
+   （12,039,580 B，1491 帧，14.90 s），复制到 `~/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/3/`。
+2. `scripts/motion_stats.py` 做前置校验：
+   `acceptance_precondition_ok = 时长 ≥10 s 且前 10 s 路径速度 ≥0.6 m/s`
+   （用路径长度而非净位移，因为片段含转身；两种速度都在 `reports/motion_stats.json` 里）。
+   1190 条动作里只有这一条通过（0.752 m/s）。
+3. `scripts/eval_walk.py` 跑 20 个 stochastic seed（默认 horizon），再用 `--horizon 3000` 复跑一次。
+4. `--video --video_every 5` 导出 seed 0（通过）与 seed 10（侧偏失败）的 10 s 视频。
+
+全部命令与参数见 `reports/C_acceptance.md` C8 节和 README。
 
 ## 下一阶段接入患侧 F0 缩放与拐杖接触所需改动（本次未实现）
 
