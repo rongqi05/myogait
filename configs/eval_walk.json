@@ -1,0 +1,74 @@
+{
+  "protocol_version": "1.0",
+  "frozen": {
+    "musclemimic_src_commit": "47b653db2bce25de834360d2ee6b2dd88142bd78",
+    "musclemimic_models_version": "1.0.5",
+    "musclemimic_models_commit": "ba69358c6333692d547836b903f051fe6a8e9cc9",
+    "mujoco": "3.4.0",
+    "numpy": "2.2.6",
+    "python": "3.11.15",
+    "checkpoint_repo": "amathislab/mm-10m-2",
+    "checkpoint_update_number": 12500,
+    "checkpoint_digest_sha256": "c8c7a964b88b7163bc9989785063cbb751dae88cd4358eaced25bf3475a73b2a",
+    "motions": {
+      "walking_medium09": {
+        "path": "KIT/314/walking_medium09_poses",
+        "sha256": "8f320295504ffc0a7759ba76ee454dd2b1e3f1feb7244d476b2373100235cc9b",
+        "duration_s": 7.72
+      },
+      "circle04": {
+        "path": "KIT/4/WalkInCounterClockwiseCircle04_poses",
+        "sha256": "8e249a712f95a7d2cfcc3653db2012892b948bbcc94da21d2348078cce904ddf",
+        "duration_s": 8.39
+      },
+      "turn_right03": {
+        "path": "KIT/348/turn_right03_poses",
+        "sha256": "99255a4e15866ce81b3a5fe6d7b9a5de9138905697170241bebccdb1bb84399d",
+        "duration_s": 6.17
+      }
+    },
+    "backend": "mujoco_cpu",
+    "control_dt_s": 0.01,
+    "start_step": 0,
+    "mode": "stochastic",
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ]
+  },
+  "thresholds": {
+    "min_duration_s": 10.0,
+    "min_avg_forward_speed_mps": 0.6,
+    "max_lateral_offset_m": 0.35,
+    "max_tilt_deg": 45.0,
+    "fall_root_height_m": 0.6,
+    "fall_tilt_deg": 60.0
+  },
+  "definitions": {
+    "duration": "data.time at last logged step - data.time right after the single reset",
+    "avg_forward_speed": "sum of per-step pelvis displacement projected on the instantaneous reference heading / duration",
+    "max_lateral_offset": "max |cumulative integral of the cross-track component of per-step pelvis displacement| relative to the instantaneous reference heading",
+    "max_lateral_from_reference": "max perpendicular distance between policy pelvis and reference pelvis, projected on the lateral axis of the initial reference heading",
+    "tilt": "pelvis: angle between root body +z and world +z; trunk: angle between (upper_body_mimic - pelvis_mimic) and world +z",
+    "foot_slip": "tangential speed of the contacting foot material point (v_body + omega x r), integrated while normal force > 20 N",
+    "max_lateral_deviation": "max(max_lateral_offset, max_lateral_from_reference); this is the quantity compared against the 0.35 m threshold"
+  }
+}

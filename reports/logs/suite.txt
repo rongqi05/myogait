@@ -1,0 +1,427 @@
+[1/6] pilot stochastic (3 seeds)
+=== stochastic seed 0 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.321 m/s lat=0.139 tilt=7.9/30.0 ref_end=772/772
+=== stochastic seed 1 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.322 m/s lat=0.119 tilt=8.4/30.0 ref_end=772/772
+=== stochastic seed 2 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.332 m/s lat=0.030 tilt=8.2/29.5 ref_end=772/772
+0/3 seeds met all criteria
+3/3 seeds completed the available reference clip without failure
+[2/6] pilot deterministic (3 seeds)
+=== deterministic seed 0 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 1 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 2 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+0/3 seeds met all criteria
+0/3 seeds completed the available reference clip without failure
+[3/6] acceptance stochastic (20 seeds)
+=== stochastic seed 0 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.321 m/s lat=0.139 tilt=7.9/30.0 ref_end=772/772
+=== stochastic seed 1 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.322 m/s lat=0.119 tilt=8.4/30.0 ref_end=772/772
+=== stochastic seed 2 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.332 m/s lat=0.030 tilt=8.2/29.5 ref_end=772/772
+=== stochastic seed 3 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.327 m/s lat=0.129 tilt=9.2/30.5 ref_end=772/772
+=== stochastic seed 4 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.328 m/s lat=0.170 tilt=8.7/29.1 ref_end=772/772
+=== stochastic seed 5 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.320 m/s lat=0.258 tilt=9.4/30.5 ref_end=772/772
+=== stochastic seed 6 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.321 m/s lat=0.151 tilt=8.2/30.0 ref_end=772/772
+=== stochastic seed 7 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.332 m/s lat=0.048 tilt=8.4/29.8 ref_end=772/772
+=== stochastic seed 8 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.329 m/s lat=0.122 tilt=7.7/29.5 ref_end=772/772
+=== stochastic seed 9 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.324 m/s lat=0.229 tilt=8.3/29.4 ref_end=772/772
+=== stochastic seed 10 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.330 m/s lat=0.130 tilt=8.4/30.6 ref_end=772/772
+=== stochastic seed 11 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.328 m/s lat=0.197 tilt=8.4/29.8 ref_end=772/772
+=== stochastic seed 12 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.328 m/s lat=0.075 tilt=7.6/29.6 ref_end=772/772
+=== stochastic seed 13 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.328 m/s lat=0.029 tilt=8.1/30.5 ref_end=772/772
+=== stochastic seed 14 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.325 m/s lat=0.128 tilt=8.4/30.3 ref_end=772/772
+=== stochastic seed 15 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.341 m/s lat=0.118 tilt=8.6/30.6 ref_end=772/772
+=== stochastic seed 16 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.328 m/s lat=0.074 tilt=8.6/30.3 ref_end=772/772
+=== stochastic seed 17 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.329 m/s lat=0.122 tilt=7.9/30.6 ref_end=772/772
+=== stochastic seed 18 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.329 m/s lat=0.065 tilt=7.8/29.6 ref_end=772/772
+=== stochastic seed 19 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.328 m/s lat=0.068 tilt=8.5/29.4 ref_end=772/772
+0/20 seeds met all criteria
+20/20 seeds completed the available reference clip without failure
+[4/6] acceptance deterministic (20 seeds)
+=== deterministic seed 0 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 1 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 2 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 3 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 4 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 5 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 6 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 7 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 8 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 9 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 10 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 11 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 12 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 13 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 14 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 15 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 16 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 17 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 18 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+=== deterministic seed 19 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.311 m/s lat=0.606 tilt=8.2/29.3 ref_end=772/772
+0/20 seeds met all criteria
+0/20 seeds completed the available reference clip without failure
+[5/6] acceptance circle clip (20 seeds)
+=== stochastic seed 0 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.519 m/s lat=0.085 tilt=11.7/33.2 ref_end=839/839
+=== stochastic seed 1 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.513 m/s lat=0.426 tilt=11.1/32.8 ref_end=839/839
+=== stochastic seed 2 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.533 m/s lat=0.115 tilt=11.9/32.8 ref_end=839/839
+=== stochastic seed 3 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.513 m/s lat=0.252 tilt=10.9/32.6 ref_end=839/839
+=== stochastic seed 4 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.525 m/s lat=0.092 tilt=10.9/33.3 ref_end=839/839
+=== stochastic seed 5 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.508 m/s lat=0.123 tilt=11.3/32.7 ref_end=839/839
+=== stochastic seed 6 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.506 m/s lat=0.380 tilt=10.5/32.9 ref_end=839/839
+=== stochastic seed 7 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.509 m/s lat=0.229 tilt=10.3/32.1 ref_end=839/839
+=== stochastic seed 8 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.498 m/s lat=0.159 tilt=11.5/32.6 ref_end=839/839
+=== stochastic seed 9 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.518 m/s lat=0.129 tilt=11.4/32.6 ref_end=839/839
+=== stochastic seed 10 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.508 m/s lat=0.196 tilt=10.9/32.4 ref_end=839/839
+=== stochastic seed 11 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.510 m/s lat=0.122 tilt=11.0/32.9 ref_end=839/839
+=== stochastic seed 12 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.519 m/s lat=0.134 tilt=10.5/31.6 ref_end=839/839
+=== stochastic seed 13 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.505 m/s lat=0.194 tilt=11.1/32.2 ref_end=839/839
+=== stochastic seed 14 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.522 m/s lat=0.107 tilt=11.4/32.8 ref_end=839/839
+=== stochastic seed 15 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.520 m/s lat=0.294 tilt=10.6/32.8 ref_end=839/839
+=== stochastic seed 16 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.506 m/s lat=0.204 tilt=11.3/32.1 ref_end=839/839
+=== stochastic seed 17 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.514 m/s lat=0.078 tilt=11.9/32.5 ref_end=839/839
+=== stochastic seed 18 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.505 m/s lat=0.146 tilt=10.9/32.1 ref_end=839/839
+=== stochastic seed 19 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  8.39s v_forward=0.521 m/s lat=0.052 tilt=11.0/32.7 ref_end=839/839
+0/20 seeds met all criteria
+18/20 seeds completed the available reference clip without failure
+[6/6] video (1 seed)
+=== stochastic seed 0 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+MESA: warning: Driver does not support the 0x7d67 PCI ID.
+libEGL warning: egl: failed to create dri2 screen
+MESA: warning: Driver does not support the 0x7d67 PCI ID.
+libEGL warning: egl: failed to create dri2 screen
+/home/zrq/miniconda3/envs/hemi_msk/lib/python3.11/subprocess.py:1885: RuntimeWarning: os.fork() was called. os.fork() is incompatible with multithreaded code, and JAX is multithreaded, so this will likely lead to a deadlock.
+  self.pid = _fork_exec(
+  clip_end                 dur=  7.72s v_forward=0.321 m/s lat=0.139 tilt=7.9/30.0 ref_end=772/772
+0/1 seeds met all criteria
+1/1 seeds completed the available reference clip without failure
+done

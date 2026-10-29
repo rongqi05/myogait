@@ -1,0 +1,39 @@
+===== runs/D_105.log =====
+=== stochastic seed 0 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.321 m/s lat=0.139 tilt=7.9/30.0 ref_end=772/772
+0/1 seeds met all criteria
+1/1 seeds completed the available reference clip without failure
+===== runs/D_106.log =====
+=== stochastic seed 0 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  physical_fall            dur=  2.83s v_forward=0.154 m/s lat=0.800 tilt=52.8/48.4 ref_end=283/772
+=== stochastic seed 1 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  physical_fall            dur=  2.47s v_forward=0.019 m/s lat=0.861 tilt=54.0/50.7 ref_end=247/772
+=== stochastic seed 2 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  physical_fall            dur=  2.72s v_forward=0.083 m/s lat=0.819 tilt=52.9/46.7 ref_end=272/772
+0/3 seeds met all criteria
+0/3 seeds completed the available reference clip without failure
+===== runs/D_hybrid.log =====
+=== stochastic seed 0 ===
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+  clip_end                 dur=  7.72s v_forward=0.322 m/s lat=0.139 tilt=7.9/30.0 ref_end=772/772
+0/1 seeds met all criteria
+1/1 seeds completed the available reference clip without failure

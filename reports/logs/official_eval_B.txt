@@ -1,0 +1,196 @@
+===== runs/B_official/deterministic_seed0.log =====
+=== RESTORING TRAINING CONFIGURATION ===
+Restored training environment configuration:
+   Environment: MjxMyoFullBody
+   Goal type: GoalTrajMimic
+   Goal params: {'n_step_lookahead': 5, 'n_step_stride': 20, 'upper_body_xml_name': 'torso', 'enable_motion_phase': True, 'use_concise_lookahead': True, 'sites_for_mimic': ['pelvis_mimic', 'upper_body_mimic', 'head_mimic', 'left_shoulder_mimic', 'left_elbow_mimic', 'left_hand_mimic', 'right_shoulder_mimic', 'right_elbow_mimic', 'right_hand_mimic', 'left_hip_mimic', 'left_knee_mimic', 'left_ankle_mimic', 'left_toes_mimic', 'right_hip_mimic', 'right_knee_mimic', 'right_ankle_mimic', 'right_toes_mimic']}
+=== TRAINING TEMPORAL CONFIGURATION ===
+   Training timestep: 0.002
+   Training n_substeps: 5
+   Training control_dt: 0.01
+Configuring MyoFullBody evaluation:
+   Headless mode: using training goal class for efficiency
+   Training goal_type: GoalTrajMimic
+   Evaluation goal_type: GoalTrajMimic
+   Training sites_for_mimic: ['pelvis_mimic', 'upper_body_mimic', 'head_mimic', 'left_shoulder_mimic', 'left_elbow_mimic', 'left_hand_mimic', 'right_shoulder_mimic', 'right_elbow_mimic', 'right_hand_mimic', 'left_hip_mimic', 'left_knee_mimic', 'left_ankle_mimic', 'left_toes_mimic', 'right_hip_mimic', 'right_knee_mimic', 'right_ankle_mimic', 'right_toes_mimic']
+   Evaluation headless mode: True
+   Enhanced visualization geometries: Default
+Motion path override: ['KIT/314/walking_medium09_poses']
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+=== ENVIRONMENT VERIFICATION ===
+   Expected control_dt: 0.010000
+   Actual environment dt: 0.010000
+Environment temporal parameters correctly configured
+   Trajectory frequency: 100.0 Hz
+   Required frequency: 100.0 Hz
+   Sync ratio: 1.000
+Trajectory synchronized with policy - ghost robot will move correctly
+Starting evaluation for 1000 steps...
+Trajectory export enabled - saving to runs/B_official/deterministic_seed0
+Running evaluation with trajectory export...
+  Headless mode enabled for trajectory export
+Running evaluation with multi-episode trajectory export...
+Collecting episodes for 83 joints over 1000 total steps
+Environment dt: 0.010000
+--- Starting Episode 0 ---
+Trajectory 0
+Starting from 365/ 772
+  Episode 0 completed: 407 steps, reward: 478.766
+--- Starting Episode 1 ---
+Trajectory 0
+Starting from 24/ 772
+=== COLLECTION SUMMARY ===
+Total episodes collected: 2
+Total steps: 1000
+Total duration: 15.05s (66.4 FPS)
+Total reward: 1185.648
+=== TRAJECTORY EXPORT COMPLETE ===
+File: runs/B_official/deterministic_seed0/myofullbody_episodes_mujoco_20261029_205106.npz
+Episodes: 2 episodes stored
+Data structure:
+  Episode 0: 407 steps
+    Policy actions range: [-5.701, 6.063]
+    Muscle commands range: [-1.000, 1.000]
+  Episode 1: 593 steps
+    Policy actions range: [-7.761, 5.762]
+    Muscle commands range: [-1.000, 1.000]
+Joint names: 83 joints
+File size: 6279.8 KB
+Evaluation completed successfully!
+Trajectory data saved to: runs/B_official/deterministic_seed0/myofullbody_episodes_mujoco_20261029_205106.npz
+===== runs/B_official/stochastic_fixed0.log =====
+=== RESTORING TRAINING CONFIGURATION ===
+Restored training environment configuration:
+   Environment: MjxMyoFullBody
+   Goal type: GoalTrajMimic
+   Goal params: {'n_step_lookahead': 5, 'n_step_stride': 20, 'upper_body_xml_name': 'torso', 'enable_motion_phase': True, 'use_concise_lookahead': True, 'sites_for_mimic': ['pelvis_mimic', 'upper_body_mimic', 'head_mimic', 'left_shoulder_mimic', 'left_elbow_mimic', 'left_hand_mimic', 'right_shoulder_mimic', 'right_elbow_mimic', 'right_hand_mimic', 'left_hip_mimic', 'left_knee_mimic', 'left_ankle_mimic', 'left_toes_mimic', 'right_hip_mimic', 'right_knee_mimic', 'right_ankle_mimic', 'right_toes_mimic']}
+=== TRAINING TEMPORAL CONFIGURATION ===
+   Training timestep: 0.002
+   Training n_substeps: 5
+   Training control_dt: 0.01
+Configuring MyoFullBody evaluation:
+   Headless mode: using training goal class for efficiency
+   Training goal_type: GoalTrajMimic
+   Evaluation goal_type: GoalTrajMimic
+   Training sites_for_mimic: ['pelvis_mimic', 'upper_body_mimic', 'head_mimic', 'left_shoulder_mimic', 'left_elbow_mimic', 'left_hand_mimic', 'right_shoulder_mimic', 'right_elbow_mimic', 'right_hand_mimic', 'left_hip_mimic', 'left_knee_mimic', 'left_ankle_mimic', 'left_toes_mimic', 'right_hip_mimic', 'right_knee_mimic', 'right_ankle_mimic', 'right_toes_mimic']
+   Evaluation headless mode: True
+   Enhanced visualization geometries: Default
+Motion path override: ['KIT/314/walking_medium09_poses']
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+=== ENVIRONMENT VERIFICATION ===
+   Expected control_dt: 0.010000
+   Actual environment dt: 0.010000
+Environment temporal parameters correctly configured
+   Trajectory frequency: 100.0 Hz
+   Required frequency: 100.0 Hz
+   Sync ratio: 1.000
+Trajectory synchronized with policy - ghost robot will move correctly
+Starting evaluation for 1000 steps...
+Trajectory export enabled - saving to runs/B_official/stochastic_fixed0
+Running evaluation with trajectory export...
+  Headless mode enabled for trajectory export
+Running evaluation with multi-episode trajectory export...
+Collecting episodes for 83 joints over 1000 total steps
+Environment dt: 0.010000
+--- Starting Episode 0 ---
+Trajectory 0
+Starting from 0/ 772
+  Episode 0 completed: 772 steps, reward: 994.230
+--- Starting Episode 1 ---
+Trajectory 0
+Starting from 0/ 772
+=== COLLECTION SUMMARY ===
+Total episodes collected: 2
+Total steps: 1000
+Total duration: 15.33s (65.2 FPS)
+Total reward: 1296.374
+=== TRAJECTORY EXPORT COMPLETE ===
+File: runs/B_official/stochastic_fixed0/myofullbody_episodes_mujoco_20261029_205137.npz
+Episodes: 2 episodes stored
+Data structure:
+  Episode 0: 772 steps
+    Policy actions range: [-9.235, 8.827]
+    Muscle commands range: [-1.000, 1.000]
+  Episode 1: 228 steps
+    Policy actions range: [-8.190, 8.150]
+    Muscle commands range: [-1.000, 1.000]
+Joint names: 83 joints
+File size: 6885.9 KB
+Evaluation completed successfully!
+Trajectory data saved to: runs/B_official/stochastic_fixed0/myofullbody_episodes_mujoco_20261029_205137.npz
+===== runs/B_official/stochastic_seed0.log =====
+=== RESTORING TRAINING CONFIGURATION ===
+Restored training environment configuration:
+   Environment: MjxMyoFullBody
+   Goal type: GoalTrajMimic
+   Goal params: {'n_step_lookahead': 5, 'n_step_stride': 20, 'upper_body_xml_name': 'torso', 'enable_motion_phase': True, 'use_concise_lookahead': True, 'sites_for_mimic': ['pelvis_mimic', 'upper_body_mimic', 'head_mimic', 'left_shoulder_mimic', 'left_elbow_mimic', 'left_hand_mimic', 'right_shoulder_mimic', 'right_elbow_mimic', 'right_hand_mimic', 'left_hip_mimic', 'left_knee_mimic', 'left_ankle_mimic', 'left_toes_mimic', 'right_hip_mimic', 'right_knee_mimic', 'right_ankle_mimic', 'right_toes_mimic']}
+=== TRAINING TEMPORAL CONFIGURATION ===
+   Training timestep: 0.002
+   Training n_substeps: 5
+   Training control_dt: 0.01
+Configuring MyoFullBody evaluation:
+   Headless mode: using training goal class for efficiency
+   Training goal_type: GoalTrajMimic
+   Evaluation goal_type: GoalTrajMimic
+   Training sites_for_mimic: ['pelvis_mimic', 'upper_body_mimic', 'head_mimic', 'left_shoulder_mimic', 'left_elbow_mimic', 'left_hand_mimic', 'right_shoulder_mimic', 'right_elbow_mimic', 'right_hand_mimic', 'left_hip_mimic', 'left_knee_mimic', 'left_ankle_mimic', 'left_toes_mimic', 'right_hip_mimic', 'right_knee_mimic', 'right_ankle_mimic', 'right_toes_mimic']
+   Evaluation headless mode: True
+   Enhanced visualization geometries: Default
+Motion path override: ['KIT/314/walking_medium09_poses']
+Using validation terminal state configuration for evaluation
+[TrajectoryHandler] Skipping site addition for muscle model - trajectory has 17 mimic sites, model has 2038 total sites
+[TrajectoryHandler] traj_dt=0.010000 (100.0Hz), control_dt=0.010000 (100.0Hz), cache=sparse
+[TrajectoryHandler] INFO: Materialized sparse trajectory cache at 100.0 Hz
+=== ENVIRONMENT VERIFICATION ===
+   Expected control_dt: 0.010000
+   Actual environment dt: 0.010000
+Environment temporal parameters correctly configured
+   Trajectory frequency: 100.0 Hz
+   Required frequency: 100.0 Hz
+   Sync ratio: 1.000
+Trajectory synchronized with policy - ghost robot will move correctly
+Starting evaluation for 1000 steps...
+Trajectory export enabled - saving to runs/B_official/stochastic_seed0
+Running evaluation with trajectory export...
+  Headless mode enabled for trajectory export
+Running evaluation with multi-episode trajectory export...
+Collecting episodes for 83 joints over 1000 total steps
+Environment dt: 0.010000
+--- Starting Episode 0 ---
+Trajectory 0
+Starting from 70/ 772
+  Episode 0 completed: 702 steps, reward: 900.989
+--- Starting Episode 1 ---
+Trajectory 0
+Starting from 763/ 772
+  Episode 1 completed: 9 steps, reward: 11.519
+--- Starting Episode 2 ---
+Trajectory 0
+Starting from 129/ 772
+=== COLLECTION SUMMARY ===
+Total episodes collected: 3
+Total steps: 1000
+Total duration: 14.78s (67.7 FPS)
+Total reward: 1288.439
+=== TRAJECTORY EXPORT COMPLETE ===
+File: runs/B_official/stochastic_seed0/myofullbody_episodes_mujoco_20261029_205015.npz
+Episodes: 3 episodes stored
+Data structure:
+  Episode 0: 702 steps
+    Policy actions range: [-8.725, 8.934]
+    Muscle commands range: [-1.000, 1.000]
+  Episode 1: 9 steps
+    Policy actions range: [-8.326, 7.221]
+    Muscle commands range: [-1.000, 1.000]
+  Episode 2: 289 steps
+    Policy actions range: [-7.851, 7.915]
+    Muscle commands range: [-1.000, 1.000]
+Joint names: 83 joints
+File size: 7116.2 KB
+Evaluation completed successfully!
+Trajectory data saved to: runs/B_official/stochastic_seed0/myofullbody_episodes_mujoco_20261029_205015.npz

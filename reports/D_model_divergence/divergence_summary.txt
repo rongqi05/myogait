@@ -1,0 +1,42 @@
+seed 0, stochastic, walking_medium09, fixed start 0
+reset qpos is identical across versions (see reset_*.json); reset obs differs only at touch sensors
+
+== v1.0.5 vs v106 ==
+ steps compared: 283   first-step max|dctrl|=1.189e-03
+  first ||dqpos||>1e-09: step 0 t=0.01s
+  first ||dqpos||>1e-06: step 0 t=0.01s
+  first ||dqpos||>0.0001: step 0 t=0.01s
+  first ||dqpos||>0.001: step 0 t=0.01s
+  first ||dqpos||>0.01: step 1 t=0.02s
+  first ||dqpos||>0.05: step 3 t=0.04s
+  first ||dqpos||>0.1: step 5 t=0.06s
+  step1 (t=0.01s) top joints: [('knee_angle_l', 0.003712), ('ankle_angle_l', 0.002297), ('hip_flexion_l', 0.002285)]
+  step2 (t=0.02s) top joints: [('knee_angle_l', 0.01471), ('hip_flexion_l', 0.00915), ('ankle_angle_l', 0.00849), ('knee_angle_rotation3_l', 0.00386), ('axial_rotation', 0.0019)]
+  first |d knee_angle_l|>0.05 rad: step 4 t=0.05s
+  root height min: v105=0.944  v106=0.280
+  pelvis tilt max: v105=2.1  v106=52.8
+
+== v1.0.5 vs hybrid ==
+ steps compared: 772   first-step max|dctrl|=0.000e+00
+  first ||dqpos||>1e-09: step 0 t=0.01s
+  first ||dqpos||>1e-06: step 9 t=0.10s
+  first ||dqpos||>0.0001: step 431 t=4.32s
+  first ||dqpos||>0.001: step 436 t=4.37s
+  first ||dqpos||>0.01: step 550 t=5.51s
+  first ||dqpos||>0.05: never
+  first ||dqpos||>0.1: never
+  step1 (t=0.01s) top joints: [('pro_sup_r', 0.0), ('shoulder_rot_l', 0.0), ('shoulder_rot_r', 0.0)]
+  step2 (t=0.02s) top joints: [('pro_sup_l', 0.0), ('shoulder_rot_l', 0.0), ('deviation_l', 0.0), ('deviation_r', 0.0), ('flexion_l', 0.0)]
+  first |d knee_angle_l|>0.05 rad: never
+  root height min: v105=0.890  hybrid=0.890
+  pelvis tilt max: v105=7.9  hybrid=7.9
+
+== v1.0.6 fall timeline (seed 0) ==
+  pelvis XY ref error > 0.2 m    t=2.07s (step 206)
+  root z < 0.85                  t=2.21s (step 220)
+  root z < 0.80                  t=2.42s (step 241)
+  pelvis XY ref error > 0.5 m    t=2.50s (step 249)
+  pelvis tilt > 20 deg           t=2.53s (step 252)
+  root z < 0.60                  t=2.67s (step 266)
+  pelvis tilt > 45 deg           t=2.77s (step 276)
+  episode end                     t=2.83s (reason=physical_fall)

@@ -1,0 +1,117 @@
+[
+  {
+    "file": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/314/walking_medium09_poses.npz",
+    "n_frames": 773,
+    "frequency_hz": 100.0,
+    "duration_s": 7.72,
+    "pelvis_height_min": 0.8862805366516113,
+    "pelvis_height_max": 0.9546627998352051,
+    "net_displacement_m": 2.5837960243225098,
+    "path_length_m": 2.6480321884155273,
+    "mean_speed_whole_clip": 0.3346886041868536,
+    "mean_instant_speed": 0.34260648488998413,
+    "max_instant_speed": 1.3719213008880615,
+    "moving_fraction_speed_gt_0.2": 0.38939197930142305,
+    "longest_continuous_walk_segment": {
+      "start_s": 3.19,
+      "end_s": 6.19,
+      "duration_s": 3.0000000000000004,
+      "path_length_m": 2.5381205081939697,
+      "mean_speed": 0.8460401693979898
+    },
+    "all_segments_gt_0.2": [
+      {
+        "start_s": 3.19,
+        "end_s": 6.19,
+        "duration_s": 3.0000000000000004,
+        "path_length_m": 2.5381205081939697,
+        "mean_speed": 0.8460401693979898
+      }
+    ],
+    "foot_contact_onsets": {
+      "left": 2,
+      "right": 3
+    },
+    "meets_10s_reference": false,
+    "meets_0.6mps_over_clip": false
+  },
+  {
+    "file": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/348/turn_right03_poses.npz",
+    "n_frames": 618,
+    "frequency_hz": 100.0,
+    "duration_s": 6.17,
+    "pelvis_height_min": 0.8926119208335876,
+    "pelvis_height_max": 0.9563010931015015,
+    "net_displacement_m": 0.20058152079582214,
+    "path_length_m": 2.278409481048584,
+    "mean_speed_whole_clip": 0.03250916058279127,
+    "mean_instant_speed": 0.36869388818740845,
+    "max_instant_speed": 0.966500997543335,
+    "moving_fraction_speed_gt_0.2": 0.5485436893203883,
+    "longest_continuous_walk_segment": {
+      "start_s": 3.7,
+      "end_s": 5.4,
+      "duration_s": 1.7000000000000002,
+      "path_length_m": 0.9632943868637085,
+      "mean_speed": 0.566643756978652
+    },
+    "all_segments_gt_0.2": [
+      {
+        "start_s": 1.66,
+        "end_s": 3.33,
+        "duration_s": 1.6700000000000002,
+        "path_length_m": 1.0872585773468018,
+        "mean_speed": 0.6510530403274262
+      },
+      {
+        "start_s": 3.7,
+        "end_s": 5.4,
+        "duration_s": 1.7000000000000002,
+        "path_length_m": 0.9632943868637085,
+        "mean_speed": 0.566643756978652
+      }
+    ],
+    "foot_contact_onsets": {
+      "left": 4,
+      "right": 2
+    },
+    "meets_10s_reference": false,
+    "meets_0.6mps_over_clip": false
+  },
+  {
+    "file": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/4/WalkInCounterClockwiseCircle04_poses.npz",
+    "n_frames": 840,
+    "frequency_hz": 100.0,
+    "duration_s": 8.39,
+    "pelvis_height_min": 0.9021821618080139,
+    "pelvis_height_max": 0.9596453309059143,
+    "net_displacement_m": 0.10351478308439255,
+    "path_length_m": 4.826562404632568,
+    "mean_speed_whole_clip": 0.012337876410535464,
+    "mean_instant_speed": 0.5746033191680908,
+    "max_instant_speed": 1.174039602279663,
+    "moving_fraction_speed_gt_0.2": 0.7345238095238096,
+    "longest_continuous_walk_segment": {
+      "start_s": 1.12,
+      "end_s": 7.28,
+      "duration_s": 6.16,
+      "path_length_m": 4.663301467895508,
+      "mean_speed": 0.757029459073946
+    },
+    "all_segments_gt_0.2": [
+      {
+        "start_s": 1.12,
+        "end_s": 7.28,
+        "duration_s": 6.16,
+        "path_length_m": 4.663301467895508,
+        "mean_speed": 0.757029459073946
+      }
+    ],
+    "foot_contact_onsets": {
+      "left": 5,
+      "right": 7
+    },
+    "meets_10s_reference": false,
+    "meets_0.6mps_over_clip": false
+  }
+]
