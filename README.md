@@ -157,6 +157,9 @@ MUJOCO_GL=egl .venv/bin/python scripts/eval_walk.py \
   --mode stochastic --seeds 0 --video --video_every 5 \
   --out_dir runs/C_acceptance_video
 
+# 拿到 gated 数据集访问后：下载 14.9 s 片段 → 前置校验 → 20 seed 验收
+bash scripts/after_access_10s.sh
+
 # D) 版本配对回放（1.0.6 / 1.0.6+1.0.5 腿）
 git -C external/musclemimic_models archive v1.0.6 | tar -x -C /tmp/mm_models_106
 PYTHONPATH=/tmp/mm_models_106:external/MuscleMimic:scripts \
@@ -175,6 +178,9 @@ scripts/
   env_audit.py           A：模型/接口/checkpoint/motion 审计
   motion_stats.py        参考片段的时长、速度、连续行走段
   eval_walk.py           C：单 episode、无中途 reset 的验收 + 逐帧日志 + 视频
+  make_table.py          从 run 目录生成逐 seed markdown 表
+  after_access_10s.sh    取得 gated 数据后的一键 10 s 验收（含前置校验）
+  run_suite.sh           本次全部 6 组、67 个 rollout 的顺序复现
   dump_reset_state.py    D：记录 reset 后的 qpos/qvel/obs（版本对比用）
 configs/eval_walk.json   冻结的协议、阈值、哈希、指标定义
 reports/
