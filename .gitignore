@@ -10,3 +10,4 @@ checkpoints/
 runs/**/checkpoints/
 runs/**/vram.txt
 .venv-train/
+.venv-gmr/
