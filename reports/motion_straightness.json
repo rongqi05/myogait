@@ -1,0 +1,212 @@
+[
+  {
+    "file": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/3/walk_6m_straight_line04_poses.npz",
+    "parent_dir": "3",
+    "n_frames": 736,
+    "frequency_hz": 100.0,
+    "duration_s": 7.35,
+    "path_length_m": 5.904584884643555,
+    "net_displacement_m": 5.85426139831543,
+    "mean_path_speed": 0.8033448822644292,
+    "lateral_extent_m": 2.0056300163269043,
+    "net_turn_deg": -10.416423352219454,
+    "max_turn_in_2s_deg": 24.865181103740497,
+    "pelvis_height_min": 0.917359471321106,
+    "pelvis_height_range": 0.04226726293563843,
+    "foot_contact_onsets": {
+      "left": 8,
+      "right": 9
+    },
+    "support_fraction_while_moving": 1.0,
+    "longest_straight_window": {
+      "start_s": 0.13,
+      "end_s": 6.89,
+      "duration_s": 6.76
+    },
+    "first_10s_path_m": 5.904584884643555,
+    "first_10s_speed": 0.8033448822644292,
+    "is_10s": false,
+    "is_straight": false,
+    "is_straight_10s": false
+  },
+  {
+    "file": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/3/walk_6m_straight_line06_poses.npz",
+    "parent_dir": "3",
+    "n_frames": 1491,
+    "frequency_hz": 100.0,
+    "duration_s": 14.9,
+    "path_length_m": 9.67225456237793,
+    "net_displacement_m": 3.293902635574341,
+    "mean_path_speed": 0.6491446015018745,
+    "lateral_extent_m": 1.9987592697143555,
+    "net_turn_deg": 43.29038357751176,
+    "max_turn_in_2s_deg": 86.42229691595693,
+    "pelvis_height_min": 0.9121445417404175,
+    "pelvis_height_range": 0.05646169185638428,
+    "foot_contact_onsets": {
+      "left": 13,
+      "right": 10
+    },
+    "support_fraction_while_moving": 0.9992229992229992,
+    "longest_straight_window": {
+      "start_s": 3.75,
+      "end_s": 10.59,
+      "duration_s": 6.84
+    },
+    "first_10s_path_m": 7.524997711181641,
+    "first_10s_speed": 0.752499771118164,
+    "is_10s": true,
+    "is_straight": false,
+    "is_straight_10s": false
+  },
+  {
+    "file": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/314/walking_medium09_poses.npz",
+    "parent_dir": "314",
+    "n_frames": 773,
+    "frequency_hz": 100.0,
+    "duration_s": 7.72,
+    "path_length_m": 2.6480321884155273,
+    "net_displacement_m": 2.5837960243225098,
+    "mean_path_speed": 0.34300935083102685,
+    "lateral_extent_m": 0.09402986615896225,
+    "net_turn_deg": -60.14048341956277,
+    "max_turn_in_2s_deg": 52.37575461860797,
+    "pelvis_height_min": 0.8862805366516113,
+    "pelvis_height_range": 0.06838226318359375,
+    "foot_contact_onsets": {
+      "left": 2,
+      "right": 3
+    },
+    "support_fraction_while_moving": 1.0,
+    "longest_straight_window": {
+      "start_s": 3.53,
+      "end_s": 6.21,
+      "duration_s": 2.68
+    },
+    "first_10s_path_m": 2.6480321884155273,
+    "first_10s_speed": 0.34300935083102685,
+    "is_10s": false,
+    "is_straight": false,
+    "is_straight_10s": false
+  },
+  {
+    "file": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/348/turn_right03_poses.npz",
+    "parent_dir": "348",
+    "n_frames": 618,
+    "frequency_hz": 100.0,
+    "duration_s": 6.17,
+    "path_length_m": 2.278409481048584,
+    "net_displacement_m": 0.20058152079582214,
+    "mean_path_speed": 0.3692722011423961,
+    "lateral_extent_m": 0.22961348295211792,
+    "net_turn_deg": -157.06355689833285,
+    "max_turn_in_2s_deg": 0.0,
+    "pelvis_height_min": 0.8926119208335876,
+    "pelvis_height_range": 0.06368917226791382,
+    "foot_contact_onsets": {
+      "left": 4,
+      "right": 2
+    },
+    "support_fraction_while_moving": 0.9710144927536232,
+    "longest_straight_window": {
+      "start_s": 3.65,
+      "end_s": 5.34,
+      "duration_s": 1.69
+    },
+    "first_10s_path_m": 2.278409481048584,
+    "first_10s_speed": 0.3692722011423961,
+    "is_10s": false,
+    "is_straight": true,
+    "is_straight_10s": false
+  },
+  {
+    "file": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/4/WalkInCounterClockwiseCircle04_poses.npz",
+    "parent_dir": "4",
+    "n_frames": 840,
+    "frequency_hz": 100.0,
+    "duration_s": 8.39,
+    "path_length_m": 4.826562404632568,
+    "net_displacement_m": 0.10351478308439255,
+    "mean_path_speed": 0.5752756143781368,
+    "lateral_extent_m": 1.6838325262069702,
+    "net_turn_deg": -42.445270461372274,
+    "max_turn_in_2s_deg": 154.3696439112781,
+    "pelvis_height_min": 0.9021821618080139,
+    "pelvis_height_range": 0.05746316909790039,
+    "foot_contact_onsets": {
+      "left": 5,
+      "right": 7
+    },
+    "support_fraction_while_moving": 0.9822580645161291,
+    "longest_straight_window": {
+      "start_s": 6.2,
+      "end_s": 7.31,
+      "duration_s": 1.1099999999999994
+    },
+    "first_10s_path_m": 4.826562404632568,
+    "first_10s_speed": 0.5752756143781368,
+    "is_10s": false,
+    "is_straight": false,
+    "is_straight_10s": false
+  },
+  {
+    "file": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/4/WalkInCounterClockwiseCircle08_poses.npz",
+    "parent_dir": "4",
+    "n_frames": 854,
+    "frequency_hz": 100.0,
+    "duration_s": 8.53,
+    "path_length_m": 5.165468692779541,
+    "net_displacement_m": 0.38559120893478394,
+    "mean_path_speed": 0.6055649112285512,
+    "lateral_extent_m": 1.9172061681747437,
+    "net_turn_deg": -36.46041117131199,
+    "max_turn_in_2s_deg": 141.16988320448684,
+    "pelvis_height_min": 0.8993763327598572,
+    "pelvis_height_range": 0.05483591556549072,
+    "foot_contact_onsets": {
+      "left": 5,
+      "right": 7
+    },
+    "support_fraction_while_moving": 0.9844290657439446,
+    "longest_straight_window": {
+      "start_s": 2.02,
+      "end_s": 2.89,
+      "duration_s": 0.8700000000000001
+    },
+    "first_10s_path_m": 5.165468692779541,
+    "first_10s_speed": 0.6055649112285512,
+    "is_10s": false,
+    "is_straight": false,
+    "is_straight_10s": false
+  },
+  {
+    "file": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/424/walking_slow08_poses.npz",
+    "parent_dir": "424",
+    "n_frames": 852,
+    "frequency_hz": 100.0,
+    "duration_s": 8.51,
+    "path_length_m": 1.9881539344787598,
+    "net_displacement_m": 1.8331300020217896,
+    "mean_path_speed": 0.23362560922194592,
+    "lateral_extent_m": 0.15093505382537842,
+    "net_turn_deg": -24.699529745034937,
+    "max_turn_in_2s_deg": 50.92159218647754,
+    "pelvis_height_min": 0.9290231466293335,
+    "pelvis_height_range": 0.02771967649459839,
+    "foot_contact_onsets": {
+      "left": 2,
+      "right": 3
+    },
+    "support_fraction_while_moving": 1.0,
+    "longest_straight_window": {
+      "start_s": 2.29,
+      "end_s": 3.55,
+      "duration_s": 1.2599999999999998
+    },
+    "first_10s_path_m": 1.9881539344787598,
+    "first_10s_speed": 0.23362560922194592,
+    "is_10s": false,
+    "is_straight": false,
+    "is_straight_10s": false
+  }
+]

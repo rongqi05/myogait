@@ -6,3 +6,7 @@ runs/**/*.mp4
 runs/**/*.log
 __pycache__/
 *.pyc
+checkpoints/
+runs/**/checkpoints/
+runs/**/vram.txt
+.venv-train/

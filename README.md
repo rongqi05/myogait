@@ -33,6 +33,33 @@
 - `reports/video/10s_walk_6m_straight_line06_seed0_SUCCESS.mp4`（seed 0，侧偏 0.333 m，通过）
 - `reports/video/10s_walk_6m_straight_line06_seed10_LATERAL_FAIL.mp4`（seed 10，侧偏 1.192 m）
 
+## 直线行走训练基线（2026-10-31）
+
+任务：实现并验证"正常人体肌肉驱动的直线行走基线"。结论：**未达到 10 秒直线稳定行走（0/20）**，
+详见 [`reports/decision_straight_walking.md`](./reports/decision_straight_walking.md) 与
+[`reports/E_audit_training.md`](./reports/E_audit_training.md)。
+
+| 事实 | 值 |
+|---|---|
+| 本仓库算法 | **MuscleMimic PPOJax**（`conf_fullbody.yaml: algorithm: PPOJax`），不是 Muscle-SuperMimic（全盘无该代码） |
+| 本地 ≥10 s 直线片段 | **不存在**（最长直线窗口 6.84 s） |
+| 数据准备 | `straight_stitched_10s`，13.39 s / 0.874 m/s / 侧向 0.176 m，含 0.2 s 交叉淡入（非动力学一致） |
+| 8 GB GPU 可行档位 | `num_envs=512 × 20 steps`，峰值显存 7043 MiB，≈2.8k env-step/s，RSS 3.9 GB |
+| 本次训练 | 300 updates / 3.07M steps / 18 分钟 |
+| 10 s 验收（本次策略） | **0/20**，1.24 s 跌倒 |
+| 10 s 验收（官方 mm-10m-2） | **0/20**，19/20 走满 10 s 不跌倒，但侧偏 0.54–2.10 m |
+
+新增脚本：
+
+```
+scripts/motion_straightness.py     片段直线性/时长/接触质量审计
+scripts/prepare_straight_walk.py   直线窗口抽取 + 对齐 + 拼接 + 重算派生量
+scripts/train_straight_bounded.sh  8 GB 显存档位的受限训练（含显存监控）
+scripts/acceptance_straight.sh     冻结协议的 20 种子验收
+scripts/check_muscle_chain.py      肌肉力链路证据
+scripts/bench_train_gpu.sh         吞吐/显存基准
+```
+
 ## 环境（已冻结）
 
 | 组件 | 版本 |

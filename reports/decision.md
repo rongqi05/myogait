@@ -1,4 +1,8 @@
 # 决策：MyoFullBody + MuscleMimic 能否作为正常人行走基线
+> 后续更新：本文件记录的是 **官方 checkpoint 在原始片段上的 10 s 验收**。
+> 关于"肌肉驱动直线行走基线"的最新结论（含训练与 20 种子验收）见
+> [`decision_straight_walking.md`](./decision_straight_walking.md)。
+
 
 日期：2026-10-29（更新：取得完整数据集访问后完成 10 s 验收）
 冻结配置：`configs/eval_walk.json`（协议 v1.1）

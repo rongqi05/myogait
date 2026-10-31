@@ -209,6 +209,8 @@ def rollout(
     video_every: int = 5,
     strict_termination: bool = False,
     horizon: int | None = None,
+    perturb: float = 0.0,
+    perturb_seed: int = 0,
 ) -> dict:
     deterministic = mode == "deterministic"
     t_build = time.time()
@@ -248,6 +250,27 @@ def rollout(
     obs = env.reset()
     reset_count += 1
     reset_time = float(data.time)
+
+    perturb_info = None
+    if perturb > 0.0:
+        # Small initial-state perturbation applied ONCE, immediately after the
+        # trajectory-based reset. Joints get N(0, perturb) rad / (rad/s); the
+        # free root is left untouched so the episode still starts on the
+        # reference. The policy must recover on its own.
+        prng = np.random.default_rng(perturb_seed)
+        nq_j = model.nq - 7
+        qpos_j = data.qpos[7:].copy()
+        qvel_j = data.qvel[6:].copy()
+        data.qpos[7:] = qpos_j + prng.normal(0.0, perturb, size=nq_j)
+        data.qvel[6:] = qvel_j + prng.normal(0.0, perturb, size=qvel_j.size)
+        mujoco.mj_forward(model, data)
+        obs = env._create_observation(model, data, env._additional_carry)[0]
+        perturb_info = {
+            "sigma_rad": perturb,
+            "seed": perturb_seed,
+            "max_abs_qpos_delta": float(np.max(np.abs(data.qpos[7:] - qpos_j))),
+            "max_abs_qvel_delta": float(np.max(np.abs(data.qvel[6:] - qvel_j))),
+        }
     reset_qpos = np.array(data.qpos, copy=True)
     ref0, start_subtraj_step, traj_no = reference_frame(env)
     ref_qpos0 = np.array(ref0.qpos, copy=True)
@@ -508,6 +531,22 @@ def rollout(
         # projected on the *instantaneous* reference normal.
         rel_i = root_xy[i] - ref_xy[i]
         cross_track_max = max(cross_track_max, abs(float(np.dot(rel_i, np.array([-prev_heading[1], prev_heading[0]])))))
+    # heading error: policy travel direction vs reference travel direction
+    heading_err = []
+    prev_r = ref_xy[0] if len(ref_xy) else np.zeros(2)
+    prev_p = root_xy[0] if len(root_xy) else np.zeros(2)
+    for i in range(1, len(root_xy)):
+        dr = ref_xy[i] - prev_r
+        dp = root_xy[i] - prev_p
+        prev_r, prev_p = ref_xy[i], root_xy[i]
+        if np.linalg.norm(dr) < 1e-6 or np.linalg.norm(dp) < 1e-6:
+            continue
+        hr = np.arctan2(dr[1], dr[0])
+        hp = np.arctan2(dp[1], dp[0])
+        heading_err.append(abs(float(np.degrees((hp - hr + np.pi) % (2 * np.pi) - np.pi))))
+    max_heading_err = max(heading_err) if heading_err else 0.0
+    mean_heading_err = float(np.mean(heading_err)) if heading_err else 0.0
+
     rel = root_xy - ref_xy
     for i in range(len(rel)):
         lateral_from_ref_max = max(lateral_from_ref_max, abs(float(np.dot(rel[i], lateral_axis))))
@@ -621,6 +660,7 @@ def rollout(
         "slip_per_meter": slip_per_meter,
         "handler_checks_at_end": handler_checks,
         "clip_ended": clip_end,
+        "perturbation": perturb_info,
         "horizon": int(env.info.horizon),
         "horizon_reached": horizon_reached,
         "env_done": bool(done),
@@ -631,6 +671,8 @@ def rollout(
         "max_lateral_from_reference_initial_frame": lateral_from_ref_max,
         "max_cross_track_from_reference": cross_track_max,
         "max_lateral_deviation": lateral_dev,
+        "max_heading_error_deg": max_heading_err,
+        "mean_heading_error_deg": mean_heading_err,
         "max_tilt_pelvis_deg": tilt_max_pelvis,
         "max_tilt_torso_deg": tilt_max_torso,
         "min_root_height": height_min,
@@ -743,6 +785,8 @@ def main() -> int:
     ap.add_argument("--video", action="store_true", help="record an mp4 for each seed")
     ap.add_argument("--video_every", type=int, default=5)
     ap.add_argument("--strict_termination", action="store_true")
+    ap.add_argument("--perturb", type=float, default=0.0, help="initial joint noise sigma (rad, rad/s)")
+    ap.add_argument("--perturb_seed", type=int, default=0)
     ap.add_argument(
         "--horizon",
         type=int,
@@ -768,6 +812,8 @@ def main() -> int:
             video_every=args.video_every,
             strict_termination=args.strict_termination,
             horizon=args.horizon,
+            perturb=args.perturb,
+            perturb_seed=args.perturb_seed,
         )
         results.append(r)
         print(
@@ -789,7 +835,8 @@ def main() -> int:
         "max_lateral_offset",
         "max_cross_track_from_reference",
         "max_lateral_deviation",
-        "max_lateral_from_reference_initial_frame",
+        "max_heading_error_deg",
+        "mean_heading_error_deg",
         "max_tilt_pelvis_deg",
         "max_tilt_torso_deg",
         "min_root_height",
