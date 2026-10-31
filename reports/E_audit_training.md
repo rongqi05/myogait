@@ -250,3 +250,17 @@ NENV=512 STEPS=20 MINUTES=20 bash scripts/train_straight_bounded.sh
 横向判据，并单独报告"是否存在平行偏移"，以区分"跟踪滞后"与"几何错误"。
 
 **不建议**直接启动大规模训练：在参考尚不合格时，训练只会拟合一个含接缝的参考。
+
+## E.10 视频与图（人工查看用）
+
+| 文件 | 内容 | 规格 |
+|---|---|---|
+| `reports/video/straight10s_mm10m2_seed0_drift.mp4` | 官方 checkpoint 在拼接直线参考上的 10 s 回放（seed 0） | 640×480，20 fps，200 帧，10.0 s |
+| `reports/video/straight10s_trained3M_seed0_fall.mp4` | 本次 3.07M 步策略（seed 0），1.22 s 跌倒 | 640×480，50 fps，61 帧 |
+| `reports/figures/straight10s_path_and_height.png` | 俯视轨迹（策略 vs 参考）+ 根高/骨盆倾角时序 | 130 dpi |
+
+每帧叠加真实 `step`、`t = data.time - reset_time`、瞬时骨盆/躯干倾角，与同名 `.npz` 的 `time` 对齐。
+
+**看图/看视频时要注意的一点**（避免误判）：seed 0 的策略末位置 `(7.48, -0.55)`，参考 `(8.82, 0.05)`。
+两者欧氏距离 1.46 m，但其中约 1.34 m 是**前进滞后**（速度 0.751 vs 参考 0.874），
+真正横向（cross-track）分量是 0.672 m —— 仍然超过 0.35 m 阈值，但"偏了 1.5 米"的说法会夸大横向问题。
