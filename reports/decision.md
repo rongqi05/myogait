@@ -125,7 +125,7 @@
 
 ```bash
 # 0) 环境（Python 3.11.15，见 README 的安装步骤）
-uv venv .venv --python /home/zrq/miniconda3/envs/env_isaaclab/bin/python
+uv venv .venv --python 3.11
 uv pip install --python .venv/bin/python --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
   --extra-index-url https://pypi.org/simple <见 README>
 uv pip install --python .venv/bin/python --no-deps ./external/musclemimic_models   # v1.0.5

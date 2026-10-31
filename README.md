@@ -58,14 +58,11 @@ git clone https://github.com/amathislab/musclemimic_models.git
 git -C musclemimic_models checkout v1.0.5
 cd ..
 
-# 2) 虚拟环境（Python 3.11.15；用 env_isaaclab 的解释器，避免 uv 再下载一份）
-uv venv .venv --python /home/zrq/miniconda3/envs/env_isaaclab/bin/python
+# 2) 虚拟环境（需要 Python 3.11.x；uv 会自动取 standalone 构建）
+uv venv .venv --python 3.11
 
-#    或者让 uv 自己取一个 3.11（需要联网下载 standalone 构建）：
-#    uv venv .venv --python 3.11
-
-#    注意：本仓库当前使用的 .venv 已改为**自包含**（python 二进制 + stdlib + .so
-#    都复制进 .venv），不再依赖任何 conda 环境，因此 `pyvenv.cfg` 已改名为
+#    注意：本仓库当前使用的 .venv 是**自包含**的（python 二进制 + stdlib + .so
+#    都复制进 .venv），不依赖任何 conda 环境，因此 `pyvenv.cfg` 已改名为
 #    `pyvenv.cfg.hemi_msk_orig`。见 reports/env_snapshots/ 与下方“环境维护”。
 
 # 3) 依赖（PyPI 直连不稳定，用清华镜像 + PyPI 兜底；distrax 依赖只在 PyPI 上的 tfp-nightly）
@@ -236,7 +233,10 @@ artifacts/               checkpoint 与动作缓存（不入 git）
 - 已删除 conda 环境 `hemi_msk`（旧 mojoco，可编辑安装已失效）与 `hemirl`（muscle-rl）。
   依赖快照保存在 `reports/env_snapshots/`。
 - 清理了 pip / uv / conda 缓存。磁盘可用空间 85 G → 101 G。
-- 保留 `env_isaaclab`（Isaac Lab，11 G，验收为 `cuda_available=True`）。
+- 已删除 conda 环境 `env_isaaclab`（Isaac Lab，11 G）。依赖快照见
+  `reports/env_snapshots/env_isaaclab_freeze_20261031.txt`。
+- **现在除了 conda `base` 没有其它 conda 环境**，`.venv` 是唯一可用的 Python 环境；
+  重建 Isaac Lab 见 `reports/env_snapshots/README.md`。
 
 ## 已知限制
 
