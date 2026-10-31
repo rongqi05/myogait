@@ -124,11 +124,13 @@
 ## 复现清单
 
 ```bash
-# 0) 环境
-uv venv .venv --python /home/zrq/miniconda3/envs/hemi_msk/bin/python
+# 0) 环境（Python 3.11.15，见 README 的安装步骤）
+uv venv .venv --python /home/zrq/miniconda3/envs/env_isaaclab/bin/python
 uv pip install --python .venv/bin/python --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
   --extra-index-url https://pypi.org/simple <见 README>
 uv pip install --python .venv/bin/python --no-deps ./external/musclemimic_models   # v1.0.5
+#    当前 .venv 已自包含（不依赖任何 conda 环境）；完整依赖快照见
+#    reports/env_snapshots/musclemimic_venv_freeze.txt
 
 # 1) 审计
 PYTHONPATH=external/MuscleMimic:scripts .venv/bin/python scripts/env_audit.py

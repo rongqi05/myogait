@@ -58,8 +58,15 @@ git clone https://github.com/amathislab/musclemimic_models.git
 git -C musclemimic_models checkout v1.0.5
 cd ..
 
-# 2) 虚拟环境（用已有的 3.11 解释器，避免 uv 下载）
-uv venv .venv --python /home/zrq/miniconda3/envs/hemi_msk/bin/python
+# 2) 虚拟环境（Python 3.11.15；用 env_isaaclab 的解释器，避免 uv 再下载一份）
+uv venv .venv --python /home/zrq/miniconda3/envs/env_isaaclab/bin/python
+
+#    或者让 uv 自己取一个 3.11（需要联网下载 standalone 构建）：
+#    uv venv .venv --python 3.11
+
+#    注意：本仓库当前使用的 .venv 已改为**自包含**（python 二进制 + stdlib + .so
+#    都复制进 .venv），不再依赖任何 conda 环境，因此 `pyvenv.cfg` 已改名为
+#    `pyvenv.cfg.hemi_msk_orig`。见 reports/env_snapshots/ 与下方“环境维护”。
 
 # 3) 依赖（PyPI 直连不稳定，用清华镜像 + PyPI 兜底；distrax 依赖只在 PyPI 上的 tfp-nightly）
 uv pip install --python .venv/bin/python \
@@ -220,6 +227,16 @@ artifacts/               checkpoint 与动作缓存（不入 git）
 - 单进程顺序评估，峰值 RSS 2.5–4.6 GB；无 swap，无并行训练。
 - 每 seed 约 12 s（含环境构建），20 seed 约 4 分钟。
 - 视频渲染用 `MUJOCO_GL=egl`（软件 EGL，可渲染但会打印 MESA 警告）。
+
+## 环境维护（2026-10-31）
+
+- `.venv` 已改为**自包含**：python 二进制、stdlib、依赖的 `.so` 都复制进 `.venv`，
+  `pyvenv.cfg` 改名为 `pyvenv.cfg.hemi_msk_orig`（原件备份）。`sys.base_prefix == sys.prefix`。
+  改动后已用 seed 0 回放验证与清理前的结果 **逐位一致**。
+- 已删除 conda 环境 `hemi_msk`（旧 mojoco，可编辑安装已失效）与 `hemirl`（muscle-rl）。
+  依赖快照保存在 `reports/env_snapshots/`。
+- 清理了 pip / uv / conda 缓存。磁盘可用空间 85 G → 101 G。
+- 保留 `env_isaaclab`（Isaac Lab，11 G，验收为 `cuda_available=True`）。
 
 ## 已知限制
 
