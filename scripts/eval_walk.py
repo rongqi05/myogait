@@ -531,21 +531,63 @@ def rollout(
         # projected on the *instantaneous* reference normal.
         rel_i = root_xy[i] - ref_xy[i]
         cross_track_max = max(cross_track_max, abs(float(np.dot(rel_i, np.array([-prev_heading[1], prev_heading[0]])))))
-    # heading error: policy travel direction vs reference travel direction
+    # Heading error, computed on a 0.5 s window with a PCA direction and gated
+    # by speed. Per-step displacement at 100 Hz is ~8 mm, so the instantaneous
+    # direction is dominated by lateral sway and is undefined when the body is
+    # nearly stationary; using it produced spurious 180 deg samples.
+    HEAD_W = 50  # 0.5 s at 100 Hz
+
+    def _windowed_heading(xy: np.ndarray) -> np.ndarray:
+        out = np.full(len(xy), np.nan)
+        for i in range(len(xy)):
+            a = max(0, i - HEAD_W // 2)
+            b = min(len(xy), i + HEAD_W // 2 + 1)
+            seg = xy[a:b] - xy[a:b].mean(0)
+            if len(seg) < 3 or np.linalg.norm(seg[-1] - seg[0]) < 1e-3:
+                continue
+            _, _, vt = np.linalg.svd(seg, full_matrices=False)
+            v = vt[0]
+            if np.dot(v, xy[b - 1] - xy[a]) < 0:
+                v = -v
+            out[i] = np.degrees(np.arctan2(v[1], v[0]))
+        return out
+
+    def _windowed_speed(xy: np.ndarray) -> np.ndarray:
+        if len(xy) < 2:
+            return np.zeros(len(xy))
+        sp = np.concatenate([[0.0], np.linalg.norm(np.diff(xy, axis=0), axis=1) / dt])
+        k = np.ones(HEAD_W) / HEAD_W
+        return np.convolve(sp, k, mode="same")
+
     heading_err = []
-    prev_r = ref_xy[0] if len(ref_xy) else np.zeros(2)
-    prev_p = root_xy[0] if len(root_xy) else np.zeros(2)
-    for i in range(1, len(root_xy)):
-        dr = ref_xy[i] - prev_r
-        dp = root_xy[i] - prev_p
-        prev_r, prev_p = ref_xy[i], root_xy[i]
-        if np.linalg.norm(dr) < 1e-6 or np.linalg.norm(dp) < 1e-6:
-            continue
-        hr = np.arctan2(dr[1], dr[0])
-        hp = np.arctan2(dp[1], dp[0])
-        heading_err.append(abs(float(np.degrees((hp - hr + np.pi) % (2 * np.pi) - np.pi))))
+    n_low_speed_frames = 0
+    if len(root_xy) > HEAD_W:
+        hp_w = _windowed_heading(root_xy)
+        hr_w = _windowed_heading(ref_xy)
+        vp_w = _windowed_speed(root_xy)
+        vr_w = _windowed_speed(ref_xy)
+        for i in range(len(root_xy)):
+            if vp_w[i] < 0.2 or vr_w[i] < 0.2:
+                n_low_speed_frames += 1
+                continue
+            if not (np.isfinite(hp_w[i]) and np.isfinite(hr_w[i])):
+                continue
+            heading_err.append(abs(float((hp_w[i] - hr_w[i] + 180.0) % 360.0 - 180.0)))
     max_heading_err = max(heading_err) if heading_err else 0.0
     mean_heading_err = float(np.mean(heading_err)) if heading_err else 0.0
+    net_heading_err = float(
+        abs(
+            np.degrees(
+                (
+                    np.arctan2(*(root_xy[-1] - root_xy[0])[::-1])
+                    - np.arctan2(*(ref_xy[-1] - ref_xy[0])[::-1])
+                    + np.pi
+                )
+                % (2 * np.pi)
+                - np.pi
+            )
+        )
+    ) if len(root_xy) > 1 else 0.0
 
     rel = root_xy - ref_xy
     for i in range(len(rel)):
@@ -673,6 +715,8 @@ def rollout(
         "max_lateral_deviation": lateral_dev,
         "max_heading_error_deg": max_heading_err,
         "mean_heading_error_deg": mean_heading_err,
+        "net_heading_error_deg": net_heading_err,
+        "heading_low_speed_frames": int(n_low_speed_frames),
         "max_tilt_pelvis_deg": tilt_max_pelvis,
         "max_tilt_torso_deg": tilt_max_torso,
         "min_root_height": height_min,
@@ -837,6 +881,7 @@ def main() -> int:
         "max_lateral_deviation",
         "max_heading_error_deg",
         "mean_heading_error_deg",
+        "net_heading_error_deg",
         "max_tilt_pelvis_deg",
         "max_tilt_torso_deg",
         "min_root_height",
