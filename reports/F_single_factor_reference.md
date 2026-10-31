@@ -47,6 +47,7 @@ MyoFullBody 一致（`reports/env_audit.json`）。
 | 原始 AMASS / KIT（SMPL-H `poses/trans/betas`） | **无**。全盘搜索 `*amass* / *smpl*` 只命中重定向缓存目录与仓库源码，没有任何原始 mocap 文件 |
 | SMPL-H 人体模型（`SMPL_NEUTRAL.pkl` / `SMPLH_*.pkl`） | **无**（需在 smpl.is.tue.mpg.de 注册后人工下载） |
 | 预重定向缓存 | 8 个 `.npz`（7 条真实片段 + 1 条我上次拼接的 `straight_stitched_10s`） |
+| `~/Downloads/KIT.tar.bz2` | **AMASS KIT 原始 SMPL-H，4232 条**；已单独审计（`H_kit_source_audit.md`）：721 条 ≥10 s，但**全数据集最长直线窗口只有 7.09 s**，无一条 ≥8 s |
 | `~/Documents/muscle/data` | 233 个 CMU BVH + 716 个患者 BVH + 552 个 BIO `.npy` + `walking_bio.pt`；**已单独审计，见 `G_muscle_data_audit.md`**：92 条 ≥10 s，但满足"长+直+正常"的为 **0**（仅 ZombieWalk / Frankenstein 通过直线窗口） |
 
 ### F.2.2 候选运动逐一筛查（重定向之前）
