@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""Audit the AMASS KIT archive for continuous straight walking, without extracting.
+"""Audit an AMASS ``.tar.bz2`` archive for continuous straight walking, without extracting.
 
-Streams the ``.tar.bz2`` once, reads only ``trans`` and ``mocap_framerate`` from
-each ``*_poses.npz`` (SMPL-H AMASS layout) and measures motion from the root
-translation. The vertical axis is detected per clip because KIT clips are not
-consistently y-up.
+Streams the archive once, reads only ``trans`` and ``mocap_framerate`` from each
+``*_poses.npz`` (SMPL-H AMASS layout) and measures motion from the root
+translation. The vertical axis is detected per clip because AMASS subsets are not
+consistently y-up. Works for any AMASS subset, e.g.:
 
     .venv/bin/python scripts/amass_kit_audit.py --archive ~/Downloads/KIT.tar.bz2 \
         --out reports/amass_kit_audit.json
+
+    .venv/bin/python scripts/amass_kit_audit.py --archive ~/Downloads/CMU.tar.bz2 \
+        --out reports/amass_cmu_audit.json --keyword walk
 """
 
 from __future__ import annotations
@@ -36,6 +39,9 @@ def windowed_heading(xy: np.ndarray, fps: float, w_s: float = HEAD_W_S):
     h = np.full(n, np.nan)
     if n < 3:
         return h, np.zeros(n)
+    # np.convolve(mode="same") returns max(w, n) samples, so a clip shorter than
+    # the smoothing window must shrink the window instead of growing the result.
+    w = min(w, n)
     sp = np.concatenate([[0.0], np.linalg.norm(np.diff(xy, axis=0), axis=1) * fps])
     speed = np.convolve(sp, np.ones(w) / w, mode="same")
     for i in range(n):
@@ -56,7 +62,7 @@ def windowed_heading(xy: np.ndarray, fps: float, w_s: float = HEAD_W_S):
 
 
 def longest_straight(heading, t, tol):
-    best = {"start_s": 0.0, "end_s": 0.0, "duration_s": 0.0}
+    best = {"start_s": 0.0, "end_s": 0.0, "duration_s": 0.0, "i": 0, "j": 0}
     n = len(heading)
     i = 0
     while i < n:
@@ -72,7 +78,7 @@ def longest_straight(heading, t, tol):
             j += 1
         dur = float(t[j] - t[i])
         if dur > best["duration_s"]:
-            best = {"start_s": float(t[i]), "end_s": float(t[j]), "duration_s": dur}
+            best = {"start_s": float(t[i]), "end_s": float(t[j]), "duration_s": dur, "i": i, "j": j}
         i = j + 1
     return best
 
@@ -98,6 +104,25 @@ def analyse(name: str, trans: np.ndarray, fps: float) -> dict:
         max_turn = max(max_turn, float(np.ptp(wrap180(seg - seg[0]))))
     straight = longest_straight(h, t, HEADING_TOL_DEG)
 
+    # A long window that barely moves is not usable walking, so measure the
+    # window itself rather than only the whole clip.
+    i, j = straight["i"], straight["j"]
+    wxy = xy[i : j + 1]
+    wtime = straight["duration_s"]
+    w_net = float(np.linalg.norm(wxy[-1] - wxy[0])) if len(wxy) > 1 else 0.0
+    w_path = float(np.linalg.norm(np.diff(wxy, axis=0), axis=1).sum()) if len(wxy) > 1 else 0.0
+    wh = h[i : j + 1]
+    w_turn = float(np.ptp(wrap180(wh - wh[0]))) if np.isfinite(wh).all() else float("nan")
+    straight = dict(
+        straight,
+        net_displacement_m=w_net,
+        path_length_m=w_path,
+        mean_speed_mps=w_net / wtime if wtime else 0.0,
+        path_speed_mps=w_path / wtime if wtime else 0.0,
+        heading_range_deg=w_turn,
+        straightness=w_net / w_path if w_path else 0.0,
+    )
+
     return {
         "file": name,
         "subject": name.split("/")[1] if name.count("/") >= 1 else "?",
@@ -116,6 +141,9 @@ def analyse(name: str, trans: np.ndarray, fps: float) -> dict:
         "is_20s": bool(dur >= 20.0),
         "is_straight_10s": bool(straight["duration_s"] >= 10.0),
         "is_straight_20s": bool(straight["duration_s"] >= 20.0),
+        # gate used by the frozen protocol: >=10 s of window AND walking fast
+        # enough to be comparable with the 0.874 m/s reference.
+        "is_usable_10s": bool(straight["duration_s"] >= 10.0 and straight["mean_speed_mps"] >= 0.6),
     }
 
 
@@ -123,12 +151,20 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--archive", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument(
+        "--keyword",
+        default="walk",
+        help="case-insensitive clip-name keyword counted as '(keyword)-labelled' (default: walk)",
+    )
     args = ap.parse_args()
 
     rows, errors = [], []
     with tarfile.open(Path(args.archive).expanduser(), "r:bz2") as tf:
         for member in tf:
             if not member.name.endswith(".npz"):
+                continue
+            # AMASS also ships <subject>/shape.npz; it has no motion in it.
+            if member.name.endswith("/shape.npz") or member.name.endswith("shape.npz"):
                 continue
             try:
                 with np.load(io.BytesIO(tf.extractfile(member).read()), allow_pickle=True) as d:
@@ -142,16 +178,19 @@ def main() -> int:
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(out, indent=2))
 
-    walk = [r for r in rows if re.search(r"walk", r["clip"], re.I)]
-    print(f"clips={len(rows)} errors={len(errors)}  walk-labelled={len(walk)}")
+    keyword = [r for r in rows if re.search(re.escape(args.keyword), r["clip"], re.I)]
+    print(f"clips={len(rows)} errors={len(errors)}  {args.keyword}-labelled={len(keyword)}")
     print(f"duration>=10s: {sum(r['is_10s'] for r in rows)}   >=20s: {sum(r['is_20s'] for r in rows)}")
     print(f"straight window>=10s: {sum(r['is_straight_10s'] for r in rows)}   >=20s: {sum(r['is_straight_20s'] for r in rows)}")
+    print(f"usable  >=10s & >=0.6 m/s: {sum(r['is_usable_10s'] for r in rows)}")
     print()
-    print(f"{'clip':34s} {'dur':>6s} {'v':>6s} {'turn2s':>7s} {'straight':>9s}")
+    print(f"{'clip':22s} {'dur':>7s} {'v_clip':>7s} {'straight':>9s} {'w_net':>7s} {'w_speed':>8s} {'w_turn':>7s} {'w_str':>6s}")
     for r in sorted(rows, key=lambda x: -x["longest_straight_window"]["duration_s"])[:20]:
+        w = r["longest_straight_window"]
         print(
-            f"{r['clip'][:34]:34s} {r['duration_s']:6.2f} {r['mean_path_speed']:6.3f} "
-            f"{r['max_turn_in_2s_deg']:7.1f} {r['longest_straight_window']['duration_s']:9.2f}"
+            f"{r['clip'][:22]:22s} {r['duration_s']:7.2f} {r['mean_path_speed']:7.3f} "
+            f"{w['duration_s']:9.2f} {w['net_displacement_m']:7.2f} {w['mean_speed_mps']:8.3f} "
+            f"{w['heading_range_deg']:7.1f} {w['straightness']:6.3f}"
         )
     return 0
 
