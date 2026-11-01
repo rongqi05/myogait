@@ -33,6 +33,7 @@ from motion_straightness import heading_series, longest_straight_window, wrap180
 EXPECTED_NQ, EXPECTED_NV, EXPECTED_SITES = 89, 88, 17
 FOOT_SITES = ("left_ankle_mimic", "left_toes_mimic", "right_ankle_mimic", "right_toes_mimic")
 JOINT_JUMP_DEG_PER_FRAME = 20.0  # a hinge rotating this fast in one frame is a snap
+ROOT_ROT_JUMP_DEG_PER_FRAME = 20.0  # a pelvis rotating this fast in one frame is a snap
 ROOT_TELEPORT_FACTOR = 3.0  # root step vs median step
 
 
@@ -233,6 +234,37 @@ def check_root(c: dict) -> dict:
     }
 
 
+def check_root_rotation(c: dict) -> dict:
+    """Per-frame pelvis orientation change, in degrees.
+
+    Quaternions are a double cover, so consecutive poses are compared by the
+    absolute dot product; that makes the measure blind to q vs -q, which is what
+    we want. A crossfade that interpolates quaternions linearly instead of by
+    slerp drives the blend through magnitude ~0 and renormalisation then snaps
+    the direction through ~180 deg; on straight_stitched_10s that produced a
+    165.8 deg/frame jump at the seam while every other frame stayed under 2 deg.
+    """
+    import numpy as np
+
+    quat = c["qpos"][:, 3:7]
+    norm = np.linalg.norm(quat, axis=1, keepdims=True)
+    unit = quat / np.where(norm > 0, norm, 1.0)
+    dot = np.abs(np.einsum("ij,ij->i", unit[:-1], unit[1:]))
+    step_deg = np.degrees(2.0 * np.arccos(np.clip(dot, -1.0, 1.0)))
+    worst = float(step_deg.max()) if step_deg.size else 0.0
+    at = int(step_deg.argmax()) + 1 if step_deg.size else 0
+    return {
+        "ok": worst <= ROOT_ROT_JUMP_DEG_PER_FRAME,
+        "max_step_deg_per_frame": round(worst, 2),
+        "median_step_deg_per_frame": round(float(np.median(step_deg)), 3),
+        "p99_step_deg_per_frame": round(float(np.percentile(step_deg, 99)), 3),
+        "max_step_at_s": round(float(c["t"][at]), 2),
+        "threshold_deg_per_frame": ROOT_ROT_JUMP_DEG_PER_FRAME,
+        "quat_norm_min": round(float(norm.min()), 6),
+        "quat_norm_max": round(float(norm.max()), 6),
+    }
+
+
 def check_split_points(c: dict) -> dict:
     """split_points mark where several clips were concatenated into one cache."""
     sp = c["split_points"]
@@ -282,6 +314,7 @@ def main() -> int:
             "shape": check_shape(c),
             "sites": check_sites(c),
             "root": check_root(c),
+            "root_rotation": check_root_rotation(c),
             "joint_jumps": check_joint_jumps(c),
             "foot_height": check_foot_height(c),
             "split_points": check_split_points(c),
@@ -302,6 +335,7 @@ def main() -> int:
             report["checks"]["finite"]["ok"]
             and report["checks"]["shape"]["ok"]
             and report["checks"]["root"]["ok"]
+            and report["checks"]["root_rotation"]["ok"]
             and report["checks"]["joint_jumps"]["ok"]
         ),
         "single_segment": bool(not report["checks"]["split_points"]["concatenated"]),
@@ -337,7 +371,7 @@ def _print_report(r: dict) -> None:
         print("  per-0.5 s speed (m/s): " + " ".join(f"{p['mean']:.2f}" for p in prof))
 
     print("\n[checks]")
-    for key in ("finite", "shape", "sites", "root", "joint_jumps", "foot_height"):
+    for key in ("finite", "shape", "sites", "root", "root_rotation", "joint_jumps", "foot_height"):
         v = r["checks"][key]
         print(f"  {'PASS' if v.get('ok', True) else 'FAIL'}  {key}: {json.dumps({k: x for k, x in v.items() if k != 'ok'})}")
 

@@ -99,8 +99,42 @@ def load_clip(path: Path, t0: float, t1: float, pelvis_site: str):
     }
 
 
+def slerp_quat(q0: np.ndarray, q1: np.ndarray, w: np.ndarray) -> np.ndarray:
+    """Spherical interpolation of unit quaternions, w in [0, 1].
+
+    Quaternions are a double cover: q and -q are the same rotation, so two
+    consecutive poses can sit at dot = -1 and still be adjacent. Interpolating
+    that pair linearly drives the blend through magnitude ~0.08, and after
+    renormalisation its *direction* swings through ~180 deg, i.e. a rotational
+    snap of hundreds of degrees per frame. The hemisphere flip below is what
+    makes the path short instead of long.
+    """
+    d = np.einsum("ij,ij->i", q0, q1)
+    q1 = np.where(d[:, None] < 0.0, -q1, q1)
+    d = np.abs(d)
+    # near-parallel: lerp is numerically better conditioned and the error is tiny
+    close = d > 0.9995
+    out = np.empty_like(q0)
+    if close.any():
+        out[close] = (1.0 - w[close, None]) * q0[close] + w[close, None] * q1[close]
+    far = ~close
+    if far.any():
+        theta = np.arccos(np.clip(d[far], -1.0, 1.0))
+        s = np.sin(theta)
+        out[far] = (
+            np.sin((1.0 - w[far]) * theta)[:, None] / s[:, None] * q0[far]
+            + np.sin(w[far] * theta)[:, None] / s[:, None] * q1[far]
+        )
+    return out / np.linalg.norm(out, axis=1, keepdims=True)
+
+
 def stitch(segments, crossfade_s: float, freq: float):
-    """Join segments end to end, aligning root xy, crossfading the seam."""
+    """Join segments end to end, aligning root xy, crossfading the seam.
+
+    The root quaternion is crossfaded with slerp: the two segments may arrive
+    antipodal, and a linear blend would rotate the pelvis by ~290 deg inside
+    0.2 s even though the two poses are only a few degrees apart.
+    """
     n_fade = max(0, int(round(crossfade_s * freq)))
     qpos = segments[0]["qpos"].copy()
     qvel = segments[0]["qvel"].copy()
@@ -122,20 +156,26 @@ def stitch(segments, crossfade_s: float, freq: float):
 
         tail = a_q[-n_fade:]
         head = b_q[:n_fade]
-        w = np.linspace(0.0, 1.0, n_fade)[:, None]
-        blended = (1.0 - w) * tail + w * head
+        w = np.linspace(0.0, 1.0, n_fade)
+        blended = (1.0 - w[:, None]) * tail + w[:, None] * head
         # root xy: linear bridge between the two endpoints (position must stay smooth)
-        blended[:, 0:2] = (1.0 - w) * tail[:, 0:2] + w * head[:, 0:2]
-        # keep quaternions normalised after blending
-        blended[:, 3:7] /= np.linalg.norm(blended[:, 3:7], axis=1, keepdims=True)
+        blended[:, 0:2] = (1.0 - w[:, None]) * tail[:, 0:2] + w[:, None] * head[:, 0:2]
+        # root orientation: slerp, hemisphere aligned
+        blended[:, 3:7] = slerp_quat(tail[:, 3:7], head[:, 3:7], w)
 
         qpos = np.concatenate([a_q[:-n_fade], blended, b_q[n_fade:]], axis=0)
-        qvel = np.concatenate([a_v[:-n_fade], (1.0 - w) * a_v[-n_fade:] + w * b_v[:n_fade], b_v[n_fade:]], axis=0)
+        qvel = np.concatenate(
+            [a_v[:-n_fade], (1.0 - w[:, None]) * a_v[-n_fade:] + w[:, None] * b_v[:n_fade], b_v[n_fade:]], axis=0
+        )
+        dot = float(np.dot(tail[-1, 3:7], head[0, 3:7]) / (np.linalg.norm(tail[-1, 3:7]) * np.linalg.norm(head[0, 3:7])))
         seams.append(
             {
                 "index": int(len(a_q) - n_fade),
                 "crossfade_frames": n_fade,
                 "root_xy_jump_m": float(np.linalg.norm(head[0, 0:2] - tail[-1, 0:2])),
+                "root_quat_dot": dot,
+                "root_quat_antipodal": bool(dot < 0.0),
+                "root_quat_angle_deg": float(np.degrees(2 * np.arccos(min(1.0, abs(dot))))),
             }
         )
     return qpos, qvel, seams

@@ -65,21 +65,35 @@ scripts/bench_train_gpu.sh         吞吐/显存基准
 ## 三个问题必须分开回答（2026-11-01）
 
 "走满 10 s"、"跟住参考"、"通过冻结验收"是三个不同的问题，答案确实不同。
-详见 [`reports/K_retarget_blocker_and_three_way.md`](./reports/K_retarget_blocker_and_three_way.md)。
+详见 [`reports/K_retarget_blocker_and_three_way.md`](./reports/K_retarget_blocker_and_three_way.md)
+与 [`reports/L_seam_bug_and_heading_dependence.md`](./reports/L_seam_bug_and_heading_dependence.md)。
 
-| 参考 | A 走满 10 s | B 跟随参考 | C 通过冻结验收 |
-|---|---:|---:|---:|
-| `straight_stitched_10s`（拼接） | 19/20 | 0/20 | 0/20 |
-| `walk_6m_straight_line06`（未拼接，直行仅 6.84 s） | 20/20 | 4/20 | 3/20 |
+| 参考 | A 走满 10 s | B 跟随参考 | C 通过冻结验收 | 平均侧偏 |
+|---|---:|---:|---:|---:|
+| `straight_stitched_10s`（拼接，**含四元数 bug**） | 19/20 | 0/20 | 0/20 | 1.056 m |
+| `straight_stitched_10s_slerp`（拼接，**已修复**） | 20/20 | 1/20 | 0/20 | 0.769 m |
+| `walk_6m_straight_line06`（未拼接，直行仅 6.84 s） | 20/20 | 4/20 | 3/20 | 0.582 m |
 
-失效机理已定位：**不是跌倒、不是航向错误（平均 8.6°）、不是速度不足**，而是
-**持续性单侧侧移**——20/20 种子漂移方向相同，等效约 6.5° "蟹行"，10 s 累积 0.79 m，
-且 `corr(侧向漂移, 最大侧偏) = −0.975`。
+### 已定位的两个失效来源
+
+1. **拼接缝的四元数 bug（已修复）**：`prepare_straight_walk.py` 原来对根四元数做线性插值，
+   而两个片段的根四元数在缝处是**对径点**（dot = −0.9926，实际只差 13.9°）。
+   插值模长掉到 0.08，归一化把方向甩过约 180°，形成 **165.8°/帧**的姿态跳变。
+   改为半球对齐 + slerp 后降到 **1.14°/帧**；`qc_retargeted.py` 新增根朝向连续性检查来兜住这类问题。
+   修复后：进度 0.823→0.885（**20/20 种子变好**）、跌倒 1→0、侧偏 1.056→0.769 m，**仍 0/20 达标**。
+2. **策略是朝向锁定的（未解决）**：把参考刚性旋转 0/90/180/270°（物理上严格等价）后，
+   等效侧走角分别为 −3.3° / −22.9° / −4.8° / −23.1°，进度 0.88/0.66/0.92/0.74。
+   观测含世界系根四元数（`q_free_joint`，`FreeJointPosNoXY`），且训练数据朝向集中，
+   所以 ±y 属分布外。**执行器左右不对称已被排除**（145 对 `_l`/`_r` 肌肉 gain 与 ctrlrange 逐位相同）。
+
+> 因此后续所有实验必须**固定参考朝向并记录**，否则左右对比会被朝向效应污染。
 
 ```bash
 scripts/retarget_one.py      单条 AMASS → MyoFullBody 重定向（3 道前置关卡，冻结 GMR 参数）
-scripts/qc_retargeted.py     重定向产物 QC（数值/根节点/关节突变/足高/足滑/拼接段）
+scripts/qc_retargeted.py     重定向产物 QC（数值/根节点平移+朝向/关节突变/足高/足滑/拼接段）
 scripts/three_way_report.py  A/B/C 三问分开报告 + 逐回合俯视图
+scripts/rotate_reference.py  参考的刚性 z 旋转（校验不变量）
+scripts/rotation_bias_report.py  判定 body-fixed / world-fixed / 朝向依赖
 scripts/check_gmr_toolchain.py / setup_gmr_env.sh   .venv-gmr 工具链安装与 14 项自检
 ```
 
@@ -265,8 +279,10 @@ scripts/
   eval_walk.py           C：单 episode、无中途 reset 的验收 + 逐帧日志 + 视频
   make_table.py          从 run 目录生成逐 seed markdown 表
   retarget_one.py        单条 AMASS → MyoFullBody（GMR-Fit），3 道前置关卡
-  qc_retargeted.py       重定向产物 QC：数值/根节点/关节突变/足高/足滑/拼接段
+  qc_retargeted.py       重定向产物 QC：数值/根节点平移+朝向/关节突变/足高/足滑/拼接段
   three_way_report.py    A 走满 / B 跟随参考 / C 通过验收，逐回合报告 + 俯视图
+  rotate_reference.py    参考的刚性 z 旋转（校验平移不变性 + rot000 逐位复现）
+  rotation_bias_report.py  body-fixed / world-fixed / 朝向依赖 判定
   check_gmr_toolchain.py .venv-gmr 的 14 项自检（含 1.0.5 膝约束符号模式）
   setup_gmr_env.sh       重建 .venv-gmr 并回退 musclemimic_models 到 1.0.5
   amass_kit_audit.py     流式审计 AMASS .tar.bz2（不解压）：时长/直行窗/速度
@@ -326,3 +342,8 @@ artifacts/               checkpoint 与动作缓存（不入 git）
 - 策略的足滑另由 `eval_walk.py` 用接触法向力 >20 N 判定，与参考的口径不同，不可直接相减。
 - 未拼接参考的改善**不能**归因于“去掉拼接”：两条参考的速度（0.883 vs 0.834 m/s）
   与几何（后者 10 s 窗口内直行仅 3.66–10.00 s）都不同。
+- **策略是朝向锁定的**：物理上等价的 z 旋转会让侧走角从 −3.3° 变到 −23.1°。
+  历史结果中任何在不同世界朝向上跑的组都不可直接与 0° 组比较。
+- `straight_stitched_10s`（lerp 版）**含四元数缺陷**，在该参考上的历史结果
+  （`runs/A_ref_mm10m2`、`runs/TW_stitched`、`reports/three_way.md` 的 `stitched` 列）
+  已被 `_slerp` 版取代，旧文件保留作审计留痕。

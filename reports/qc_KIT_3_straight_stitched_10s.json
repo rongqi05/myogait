@@ -36,6 +36,16 @@
       "quat_norm_min": 0.9999999589668086,
       "quat_norm_max": 1.000000040407604
     },
+    "root_rotation": {
+      "ok": false,
+      "max_step_deg_per_frame": 165.77,
+      "median_step_deg_per_frame": 0.378,
+      "p99_step_deg_per_frame": 1.282,
+      "max_step_at_s": 6.66,
+      "threshold_deg_per_frame": 20.0,
+      "quat_norm_min": 1.0,
+      "quat_norm_max": 1.0
+    },
     "joint_jumps": {
       "ok": true,
       "max_hinge_delta_deg_per_frame": 10.47,
@@ -443,7 +453,7 @@
     "window_speed_mps": 0.875,
     "window_speed_ge_0p6": true,
     "straightness_ge_0p99": true,
-    "no_numeric_anomaly": true,
+    "no_numeric_anomaly": false,
     "single_segment": true
   }
 }

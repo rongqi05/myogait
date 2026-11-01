@@ -1,0 +1,74 @@
+{
+  "source": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/3/straight_stitched_10s_slerp.npz",
+  "frequency_hz": 100.0,
+  "variants": [
+    {
+      "out": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/3/rotref_slerp_rot000.npz",
+      "pelvis_start_xy": [
+        0.023362331092357635,
+        0.01477003749459982
+      ],
+      "pelvis_end_xy": [
+        11.657362937927246,
+        0.01477003749459982
+      ],
+      "net_displacement_m": 11.634000778198242,
+      "path_length_m": 11.699247360229492,
+      "height_min_m": 0.9167494773864746,
+      "clip": "KIT/3/rotref_slerp_rot000",
+      "rotation_deg": 0.0,
+      "name": "rotref_slerp_rot000"
+    },
+    {
+      "out": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/3/rotref_slerp_rot090.npz",
+      "pelvis_start_xy": [
+        -0.01477003749459982,
+        0.023362331092357635
+      ],
+      "pelvis_end_xy": [
+        -0.01477003749459982,
+        11.657362937927246
+      ],
+      "net_displacement_m": 11.634000778198242,
+      "path_length_m": 11.699247360229492,
+      "height_min_m": 0.9167494773864746,
+      "clip": "KIT/3/rotref_slerp_rot090",
+      "rotation_deg": 90.0,
+      "name": "rotref_slerp_rot090"
+    },
+    {
+      "out": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/3/rotref_slerp_rot180.npz",
+      "pelvis_start_xy": [
+        -0.023362331092357635,
+        -0.01477003749459982
+      ],
+      "pelvis_end_xy": [
+        -11.657362937927246,
+        -0.01477003749459982
+      ],
+      "net_displacement_m": 11.634000778198242,
+      "path_length_m": 11.699247360229492,
+      "height_min_m": 0.9167494773864746,
+      "clip": "KIT/3/rotref_slerp_rot180",
+      "rotation_deg": 180.0,
+      "name": "rotref_slerp_rot180"
+    },
+    {
+      "out": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/KIT/3/rotref_slerp_rot270.npz",
+      "pelvis_start_xy": [
+        0.01477003749459982,
+        -0.023362331092357635
+      ],
+      "pelvis_end_xy": [
+        0.01477003749459982,
+        -11.657362937927246
+      ],
+      "net_displacement_m": 11.634000778198242,
+      "path_length_m": 11.699247360229492,
+      "height_min_m": 0.9167494773864746,
+      "clip": "KIT/3/rotref_slerp_rot270",
+      "rotation_deg": 270.0,
+      "name": "rotref_slerp_rot270"
+    }
+  ]
+}
