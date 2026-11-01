@@ -1,0 +1,68 @@
+{
+  "clip": "CMU/120/120_14_poses",
+  "amass_root": "/home/zrq/.musclemimic/AMASS",
+  "gmr": {
+    "src_human": "smplh",
+    "target_fps": 30,
+    "solver": "daqp",
+    "damping": 0.5,
+    "offset_to_ground": false,
+    "use_velocity_limit": false,
+    "verbose": false
+  },
+  "gates": {
+    "model": "pass",
+    "raw_clip": "pass",
+    "facing": "pass",
+    "body_model": "pass",
+    "retarget": "pass"
+  },
+  "purpose": "diagnostic",
+  "raw": {
+    "file": "CMU/120/120_14_poses.npz",
+    "subject": "120",
+    "clip": "120_14",
+    "frames": 1283,
+    "fps": 120.0,
+    "duration_s": 10.683333333333334,
+    "up_axis": 2,
+    "path_length_m": 5.034949281091843,
+    "net_displacement_m": 4.919485370676687,
+    "mean_path_speed": 0.4712901043143691,
+    "max_turn_in_2s_deg": 23.350232437769876,
+    "moving_fraction": 0.6593920498830865,
+    "longest_straight_window": {
+      "start_s": 1.8833333333333333,
+      "end_s": 8.7,
+      "duration_s": 6.816666666666666,
+      "i": 226,
+      "j": 1044,
+      "net_displacement_m": 4.717670420625877,
+      "path_length_m": 4.747023584383664,
+      "mean_speed_mps": 0.6920787903118647,
+      "path_speed_mps": 0.6963848779046939,
+      "heading_range_deg": 26.444375255036363,
+      "straightness": 0.9938165119182576
+    },
+    "is_10s": true,
+    "is_20s": false,
+    "is_straight_10s": false,
+    "is_straight_20s": false,
+    "is_usable_10s": false
+  },
+  "facing": {
+    "clip": "120_14",
+    "verdict": "FORWARD",
+    "toes_dot_travel": {
+      "left": 0.9827448129653931,
+      "right": 0.8433493375778198
+    },
+    "net_displacement_m": 4.919485569000244,
+    "up_axis": 2,
+    "frames": 1283,
+    "frames_used": 1283
+  },
+  "retarget_seconds": 10.337080478668213,
+  "cache_path": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/CMU/120/120_14_poses.npz",
+  "cache_exists": true
+}

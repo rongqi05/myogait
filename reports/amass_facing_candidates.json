@@ -1,0 +1,34 @@
+[
+  {
+    "clip": "120_14",
+    "verdict": "FORWARD",
+    "toes_dot_travel": {
+      "left": 0.9827448129653931,
+      "right": 0.8433493375778198
+    },
+    "net_displacement_m": 4.919485569000244,
+    "up_axis": 2,
+    "frames": 1283,
+    "frames_used": 1283,
+    "clip_id": "CMU/120/120_14_poses"
+  },
+  {
+    "clip": "120_13",
+    "verdict": "FORWARD",
+    "toes_dot_travel": {
+      "left": 0.9610190391540527,
+      "right": 0.7913104891777039
+    },
+    "net_displacement_m": 4.8950347900390625,
+    "up_axis": 2,
+    "frames": 1001,
+    "frames_used": 1001,
+    "clip_id": "CMU/120/120_13_poses"
+  },
+  {
+    "clip": "142_17_poses",
+    "verdict": "STATIONARY",
+    "net_displacement_m": 0.1774642914533615,
+    "clip_id": "CMU/142/142_17_poses"
+  }
+]

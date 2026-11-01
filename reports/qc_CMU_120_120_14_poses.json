@@ -1,0 +1,503 @@
+{
+  "clip": "CMU/120/120_14_poses",
+  "cache_path": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/CMU/120/120_14_poses.npz",
+  "frequency_hz": 100.0,
+  "n_frames": 1062,
+  "duration_s": 10.61,
+  "metadata": "",
+  "checks": {
+    "finite": {
+      "ok": true,
+      "non_finite_counts": {}
+    },
+    "shape": {
+      "ok": true,
+      "nq": 89,
+      "nv": 88,
+      "nsite": 17,
+      "expected": [
+        89,
+        88,
+        17
+      ]
+    },
+    "sites": {
+      "ok": true,
+      "n_sites": 17,
+      "missing": []
+    },
+    "root": {
+      "ok": true,
+      "start_xy_offset_from_origin_m": 2.2369,
+      "start_xy_ok": false,
+      "root_z_min_m": 0.7124689817428589,
+      "root_z_range_m": 0.23420977592468262,
+      "max_step_m": 0.014192181330475923,
+      "median_step_m": 0.005418459057896777,
+      "max_step_at_s": 6.96,
+      "quat_norm_min": 0.9999999660815566,
+      "quat_norm_max": 1.0000000344951494
+    },
+    "root_rotation": {
+      "ok": true,
+      "max_step_deg_per_frame": 1.11,
+      "median_step_deg_per_frame": 0.295,
+      "p99_step_deg_per_frame": 0.925,
+      "max_step_at_s": 5.35,
+      "threshold_deg_per_frame": 20.0,
+      "quat_norm_min": 1.0,
+      "quat_norm_max": 1.0
+    },
+    "joint_jumps": {
+      "ok": true,
+      "max_hinge_delta_deg_per_frame": 9.06,
+      "threshold_deg_per_frame": 20.0,
+      "n_offenders": 0,
+      "top_offenders": []
+    },
+    "foot_height": {
+      "ok": true,
+      "feet": {
+        "left_ankle_mimic": {
+          "z_min_m": 0.06285931071520429,
+          "z_max_m": 0.4295093341633992,
+          "frames_below_floor_minus_5mm": 0,
+          "range_m": 0.3666500234481949
+        },
+        "left_toes_mimic": {
+          "z_min_m": 0.02033061008107851,
+          "z_max_m": 0.2961821849003077,
+          "frames_below_floor_minus_5mm": 0,
+          "range_m": 0.2758515748192292
+        },
+        "right_ankle_mimic": {
+          "z_min_m": 0.0627377181497667,
+          "z_max_m": 0.3143275234050847,
+          "frames_below_floor_minus_5mm": 0,
+          "range_m": 0.251589805255318
+        },
+        "right_toes_mimic": {
+          "z_min_m": 0.020718131859845872,
+          "z_max_m": 0.29805597255654015,
+          "frames_below_floor_minus_5mm": 0,
+          "range_m": 0.27733784069669426
+        }
+      },
+      "max_ankle_lift_m": 0.3666500234481949
+    },
+    "contact": {
+      "ok": true,
+      "band_m": 0.02,
+      "foot_contact_onsets": {
+        "left_ankle_mimic": 3,
+        "right_ankle_mimic": 5
+      },
+      "support_fraction": 0.8588,
+      "double_support_fraction": 0.2787,
+      "step_period_s": 2.655
+    },
+    "split_points": {
+      "concatenated": false,
+      "n_segments": 1,
+      "segment_lengths_frames": [
+        1062
+      ],
+      "covers_full_clip": true
+    },
+    "foot_slip": {
+      "headline_margin_mm": 5,
+      "definition": "z < z_min + margin, no speed gate",
+      "feet": {
+        "left_ankle_mimic": {
+          "floor_z_m": 0.06285931071520429,
+          "by_margin_mm": {
+            "2mm": {
+              "planted_fraction": 0.016,
+              "slip_distance_m": 0.0223,
+              "slip_speed_mps": 0.131
+            },
+            "5mm": {
+              "planted_fraction": 0.5141,
+              "slip_distance_m": 0.2449,
+              "slip_speed_mps": 0.0448
+            },
+            "10mm": {
+              "planted_fraction": 0.5687,
+              "slip_distance_m": 0.3208,
+              "slip_speed_mps": 0.0531
+            },
+            "20mm": {
+              "planted_fraction": 0.6262,
+              "slip_distance_m": 0.4114,
+              "slip_speed_mps": 0.0619
+            }
+          }
+        },
+        "left_toes_mimic": {
+          "floor_z_m": 0.02033061008107851,
+          "by_margin_mm": {
+            "2mm": {
+              "planted_fraction": 0.0056,
+              "slip_distance_m": 0.007,
+              "slip_speed_mps": 0.1164
+            },
+            "5mm": {
+              "planted_fraction": 0.0282,
+              "slip_distance_m": 0.0241,
+              "slip_speed_mps": 0.0804
+            },
+            "10mm": {
+              "planted_fraction": 0.0556,
+              "slip_distance_m": 0.0482,
+              "slip_speed_mps": 0.0817
+            },
+            "20mm": {
+              "planted_fraction": 0.4765,
+              "slip_distance_m": 0.1917,
+              "slip_speed_mps": 0.0379
+            }
+          }
+        },
+        "right_ankle_mimic": {
+          "floor_z_m": 0.0627377181497667,
+          "by_margin_mm": {
+            "2mm": {
+              "planted_fraction": 0.0678,
+              "slip_distance_m": 0.084,
+              "slip_speed_mps": 0.1167
+            },
+            "5mm": {
+              "planted_fraction": 0.1554,
+              "slip_distance_m": 0.1923,
+              "slip_speed_mps": 0.1165
+            },
+            "10mm": {
+              "planted_fraction": 0.2957,
+              "slip_distance_m": 0.2338,
+              "slip_speed_mps": 0.0745
+            },
+            "20mm": {
+              "planted_fraction": 0.5113,
+              "slip_distance_m": 0.3498,
+              "slip_speed_mps": 0.0644
+            }
+          }
+        },
+        "right_toes_mimic": {
+          "floor_z_m": 0.020718131859845872,
+          "by_margin_mm": {
+            "2mm": {
+              "planted_fraction": 0.0179,
+              "slip_distance_m": 0.0124,
+              "slip_speed_mps": 0.0652
+            },
+            "5mm": {
+              "planted_fraction": 0.0452,
+              "slip_distance_m": 0.0312,
+              "slip_speed_mps": 0.0651
+            },
+            "10mm": {
+              "planted_fraction": 0.1064,
+              "slip_distance_m": 0.069,
+              "slip_speed_mps": 0.0611
+            },
+            "20mm": {
+              "planted_fraction": 0.3277,
+              "slip_distance_m": 0.1645,
+              "slip_speed_mps": 0.0473
+            }
+          }
+        }
+      }
+    }
+  },
+  "window": {
+    "start_s": 1.87,
+    "end_s": 8.63,
+    "duration_s": 6.760000000000001,
+    "net_displacement_m": 4.701630060333938,
+    "path_length_m": 4.73180838706182,
+    "mean_speed_mps": 0.6955074053748428,
+    "path_speed_mps": 0.6999716548908017,
+    "straightness": 0.9936222424368665,
+    "clip_mean_speed_mps": 0.4698563059082616,
+    "speed_profile_0p5s": [
+      {
+        "t": 0.0,
+        "mean": 0.056,
+        "min": 0.015
+      },
+      {
+        "t": 0.5,
+        "mean": 0.054,
+        "min": 0.007
+      },
+      {
+        "t": 1.0,
+        "mean": 0.023,
+        "min": 0.009
+      },
+      {
+        "t": 1.5,
+        "mean": 0.145,
+        "min": 0.025
+      },
+      {
+        "t": 2.0,
+        "mean": 0.694,
+        "min": 0.312
+      },
+      {
+        "t": 2.5,
+        "mean": 0.71,
+        "min": 0.315
+      },
+      {
+        "t": 3.0,
+        "mean": 0.481,
+        "min": 0.316
+      },
+      {
+        "t": 3.5,
+        "mean": 0.944,
+        "min": 0.757
+      },
+      {
+        "t": 4.0,
+        "mean": 0.547,
+        "min": 0.465
+      },
+      {
+        "t": 4.5,
+        "mean": 0.978,
+        "min": 0.597
+      },
+      {
+        "t": 5.0,
+        "mean": 0.46,
+        "min": 0.306
+      },
+      {
+        "t": 5.5,
+        "mean": 0.907,
+        "min": 0.44
+      },
+      {
+        "t": 6.0,
+        "mean": 0.68,
+        "min": 0.469
+      },
+      {
+        "t": 6.5,
+        "mean": 0.863,
+        "min": 0.49
+      },
+      {
+        "t": 7.0,
+        "mean": 0.666,
+        "min": 0.293
+      },
+      {
+        "t": 7.5,
+        "mean": 0.658,
+        "min": 0.323
+      },
+      {
+        "t": 8.0,
+        "mean": 0.757,
+        "min": 0.318
+      },
+      {
+        "t": 8.5,
+        "mean": 0.157,
+        "min": 0.102
+      },
+      {
+        "t": 9.0,
+        "mean": 0.199,
+        "min": 0.079
+      },
+      {
+        "t": 9.5,
+        "mean": 0.036,
+        "min": 0.026
+      },
+      {
+        "t": 10.0,
+        "mean": 0.019,
+        "min": 0.009
+      }
+    ]
+  },
+  "foot_slip": {
+    "headline_margin_mm": 5,
+    "definition": "z < z_min + margin, no speed gate",
+    "feet": {
+      "left_ankle_mimic": {
+        "floor_z_m": 0.06285931071520429,
+        "by_margin_mm": {
+          "2mm": {
+            "planted_fraction": 0.016,
+            "slip_distance_m": 0.0223,
+            "slip_speed_mps": 0.131
+          },
+          "5mm": {
+            "planted_fraction": 0.5141,
+            "slip_distance_m": 0.2449,
+            "slip_speed_mps": 0.0448
+          },
+          "10mm": {
+            "planted_fraction": 0.5687,
+            "slip_distance_m": 0.3208,
+            "slip_speed_mps": 0.0531
+          },
+          "20mm": {
+            "planted_fraction": 0.6262,
+            "slip_distance_m": 0.4114,
+            "slip_speed_mps": 0.0619
+          }
+        }
+      },
+      "left_toes_mimic": {
+        "floor_z_m": 0.02033061008107851,
+        "by_margin_mm": {
+          "2mm": {
+            "planted_fraction": 0.0056,
+            "slip_distance_m": 0.007,
+            "slip_speed_mps": 0.1164
+          },
+          "5mm": {
+            "planted_fraction": 0.0282,
+            "slip_distance_m": 0.0241,
+            "slip_speed_mps": 0.0804
+          },
+          "10mm": {
+            "planted_fraction": 0.0556,
+            "slip_distance_m": 0.0482,
+            "slip_speed_mps": 0.0817
+          },
+          "20mm": {
+            "planted_fraction": 0.4765,
+            "slip_distance_m": 0.1917,
+            "slip_speed_mps": 0.0379
+          }
+        }
+      },
+      "right_ankle_mimic": {
+        "floor_z_m": 0.0627377181497667,
+        "by_margin_mm": {
+          "2mm": {
+            "planted_fraction": 0.0678,
+            "slip_distance_m": 0.084,
+            "slip_speed_mps": 0.1167
+          },
+          "5mm": {
+            "planted_fraction": 0.1554,
+            "slip_distance_m": 0.1923,
+            "slip_speed_mps": 0.1165
+          },
+          "10mm": {
+            "planted_fraction": 0.2957,
+            "slip_distance_m": 0.2338,
+            "slip_speed_mps": 0.0745
+          },
+          "20mm": {
+            "planted_fraction": 0.5113,
+            "slip_distance_m": 0.3498,
+            "slip_speed_mps": 0.0644
+          }
+        }
+      },
+      "right_toes_mimic": {
+        "floor_z_m": 0.020718131859845872,
+        "by_margin_mm": {
+          "2mm": {
+            "planted_fraction": 0.0179,
+            "slip_distance_m": 0.0124,
+            "slip_speed_mps": 0.0652
+          },
+          "5mm": {
+            "planted_fraction": 0.0452,
+            "slip_distance_m": 0.0312,
+            "slip_speed_mps": 0.0651
+          },
+          "10mm": {
+            "planted_fraction": 0.1064,
+            "slip_distance_m": 0.069,
+            "slip_speed_mps": 0.0611
+          },
+          "20mm": {
+            "planted_fraction": 0.3277,
+            "slip_distance_m": 0.1645,
+            "slip_speed_mps": 0.0473
+          }
+        }
+      }
+    }
+  },
+  "raw_comparison": {
+    "raw_path": "/home/zrq/.musclemimic/AMASS/CMU/120/120_14_poses.npz",
+    "raw_fps": 120.0,
+    "raw_window_s": [
+      1.8833333333333333,
+      8.7
+    ],
+    "retargeted_window_s": [
+      1.87,
+      8.63
+    ],
+    "table": [
+      {
+        "quantity": "duration_s",
+        "raw": 10.6833,
+        "retargeted": 10.61,
+        "delta": -0.0733
+      },
+      {
+        "quantity": "straight_window_s",
+        "raw": 6.8167,
+        "retargeted": 6.76,
+        "delta": -0.0567
+      },
+      {
+        "quantity": "window_net_m",
+        "raw": 4.7177,
+        "retargeted": 4.7016,
+        "delta": -0.016
+      },
+      {
+        "quantity": "window_speed_mps",
+        "raw": 0.6921,
+        "retargeted": 0.6955,
+        "delta": 0.0034
+      },
+      {
+        "quantity": "window_straightness",
+        "raw": 0.9938,
+        "retargeted": 0.9936,
+        "delta": -0.0002
+      },
+      {
+        "quantity": "clip_mean_speed_mps",
+        "raw": 0.4713,
+        "retargeted": 0.4699,
+        "delta": -0.0014
+      }
+    ],
+    "survived": {
+      "straight_window_ge_10s_after": false,
+      "window_shrank_over_10pct": false,
+      "speed_changed_over_10pct": false
+    }
+  },
+  "verdict": {
+    "duration_ge_10s": true,
+    "straight_window_ge_10s": false,
+    "window_speed_mps": 0.696,
+    "window_speed_ge_0p6": true,
+    "straightness_ge_0p99": true,
+    "no_numeric_anomaly": true,
+    "single_segment": true,
+    "starts_near_origin": false
+  }
+}

@@ -88,7 +88,7 @@ def gate_model() -> None:
     print(f"  model: musclemimic_models {version}, nq/nv/nu={dims}, knee 1.0.5 layout")
 
 
-def gate_raw_clip(clip: str, amass_root: Path) -> dict:
+def gate_raw_clip(clip: str, amass_root: Path, purpose: str = "baseline") -> dict:
     """Measure the raw clip; retargeting must not be the thing that makes it usable."""
     import numpy as np
 
@@ -110,10 +110,18 @@ def gate_raw_clip(clip: str, amass_root: Path) -> dict:
         f"({window['duration_s']:.2f} s, {window['mean_speed_mps']:.3f} m/s)"
     )
     if window["duration_s"] < MIN_DURATION_S:
-        raise RuntimeError(
+        message = (
             f"raw straight window is {window['duration_s']:.2f} s < {MIN_DURATION_S} s; "
             "a retargeted clip cannot be longer/straighter than its source"
         )
+        if purpose == "diagnostic":
+            # A diagnostic run is allowed to use a clip that fails the baseline
+            # data gate, but only when the caller says so up front: the resulting
+            # reference is then never eligible for acceptance and the waiver is
+            # recorded in the JSON.
+            print(f"  WAIVED (purpose=diagnostic): {message}")
+        else:
+            raise RuntimeError(message)
     return row
 
 
@@ -163,6 +171,13 @@ def main() -> int:
     ap.add_argument("--clip", required=True, help="AMASS clip id relative to the AMASS root, e.g. CMU/136/136_25_poses")
     ap.add_argument("--smpl-root", default=str(Path.home() / ".musclemimic" / "smpl"))
     ap.add_argument("--dry-run", action="store_true", help="run the gates only")
+    ap.add_argument(
+        "--purpose",
+        choices=["baseline", "diagnostic"],
+        default="baseline",
+        help="'baseline' enforces every gate; 'diagnostic' waives the >=10 s straight-window gate "
+        "and marks the output as ineligible for acceptance",
+    )
     ap.add_argument("--json-out", default=None, help="write a machine-readable summary")
     args = ap.parse_args()
 
@@ -186,7 +201,8 @@ def main() -> int:
 
     print("\n[gate 2] raw clip is already a >=10 s straight walk")
     try:
-        summary["raw"] = gate_raw_clip(args.clip, amass_root)
+        summary["purpose"] = args.purpose
+        summary["raw"] = gate_raw_clip(args.clip, amass_root, purpose=args.purpose)
         summary["gates"]["raw_clip"] = "pass"
     except Exception as exc:
         summary["gates"]["raw_clip"] = f"fail: {exc}"

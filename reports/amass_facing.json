@@ -1,5 +1,18 @@
 [
   {
+    "clip": "136_08",
+    "verdict": "BACKWARD",
+    "toes_dot_travel": {
+      "left": -0.9502977728843689,
+      "right": -0.9730340838432312
+    },
+    "net_displacement_m": 6.049602031707764,
+    "up_axis": 2,
+    "frames": 1332,
+    "frames_used": 1332,
+    "clip_id": "CMU/136/136_08_poses"
+  },
+  {
     "clip": "136_25",
     "verdict": "BACKWARD",
     "toes_dot_travel": {

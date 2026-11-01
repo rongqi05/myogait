@@ -1,23 +1,23 @@
 {
-  "source": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/CMU/120/120_19_straight.npz",
+  "source": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/CMU/120/120_14_poses.npz",
   "frequency_hz": 100.0,
   "variants": [
     {
-      "out": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/CMU/120/cmu120_straight_rot181.npz",
+      "out": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/CMU/120/cmu120_14_rot031.npz",
       "pelvis_start_xy": [
         0.0,
         0.0
       ],
       "pelvis_end_xy": [
-        4.872567653656006,
-        -0.0001384428032906726
+        4.90721321105957,
+        0.00032124336576089263
       ],
-      "net_displacement_m": 4.872567653656006,
-      "path_length_m": 4.957882881164551,
-      "height_min_m": 0.9108495712280273,
-      "clip": "CMU/120/cmu120_straight_rot181",
-      "rotation_deg": -179.09,
-      "name": "cmu120_straight_rot181"
+      "net_displacement_m": 4.90721321105957,
+      "path_length_m": 5.0169806480407715,
+      "height_min_m": 0.7124689817428589,
+      "clip": "CMU/120/cmu120_14_rot031",
+      "rotation_deg": 31.82,
+      "name": "cmu120_14_rot031"
     }
   ]
 }
