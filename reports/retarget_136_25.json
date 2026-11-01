@@ -1,0 +1,54 @@
+{
+  "clip": "CMU/136/136_25_poses",
+  "amass_root": "/home/zrq/.musclemimic/AMASS",
+  "gmr": {
+    "src_human": "smplh",
+    "target_fps": 30,
+    "solver": "daqp",
+    "damping": 0.5,
+    "offset_to_ground": false,
+    "use_velocity_limit": false,
+    "verbose": false
+  },
+  "gates": {
+    "model": "pass",
+    "raw_clip": "pass",
+    "body_model": "pass",
+    "retarget": "pass"
+  },
+  "raw": {
+    "file": "CMU/136/136_25_poses.npz",
+    "subject": "136",
+    "clip": "136_25",
+    "frames": 1789,
+    "fps": 120.0,
+    "duration_s": 14.9,
+    "up_axis": 2,
+    "path_length_m": 6.38582539999554,
+    "net_displacement_m": 6.2276006210178485,
+    "mean_path_speed": 0.42857888590574095,
+    "max_turn_in_2s_deg": 39.114968526921984,
+    "moving_fraction": 0.8390162101732812,
+    "longest_straight_window": {
+      "start_s": 1.85,
+      "end_s": 13.491666666666667,
+      "duration_s": 11.641666666666667,
+      "i": 222,
+      "j": 1619,
+      "net_displacement_m": 5.899226396414287,
+      "path_length_m": 5.975982956582477,
+      "mean_speed_mps": 0.506733835053482,
+      "path_speed_mps": 0.5133270972010717,
+      "heading_range_deg": 32.99125093529767,
+      "straightness": 0.987155826794378
+    },
+    "is_10s": true,
+    "is_20s": false,
+    "is_straight_10s": true,
+    "is_straight_20s": false,
+    "is_usable_10s": false
+  },
+  "retarget_seconds": 17.56432795524597,
+  "cache_path": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/CMU/136/136_25_poses.npz",
+  "cache_exists": true
+}

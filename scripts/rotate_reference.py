@@ -32,11 +32,14 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from prepare_straight_walk import build_model, recompute_derived  # noqa: E402
 
-# Fields copied verbatim from the source; everything geometric is recomputed.
-COPY_FIELDS = (
+# Model metadata. A cache written by the GMR path leaves most of these empty and
+# lets the loader take them from the model, so each one is taken from the source
+# only when it actually holds data.
+# site_names / body_names are written explicitly from the mimic-site list, so
+# they must not be in this tuple: the model carries all 2038 sites, not the 17
+# mimic sites a trajectory stores.
+METADATA_FIELDS = (
     "joint_names",
-    "body_names",
-    "site_names",
     "njnt",
     "jnt_type",
     "nbody",
@@ -52,6 +55,44 @@ COPY_FIELDS = (
     "site_pos",
     "site_quat",
 )
+
+
+def model_metadata(model) -> dict:
+    """The metadata a trajectory is expected to carry, read off the model."""
+    import mujoco
+
+    def names(obj_type, count):
+        return np.array([mujoco.mj_id2name(model, obj_type, i) or f"_{i}" for i in range(count)])
+
+    return {
+        "joint_names": names(mujoco.mjtObj.mjOBJ_JOINT, model.njnt),
+        "body_names": names(mujoco.mjtObj.mjOBJ_BODY, model.nbody),
+        "site_names": names(mujoco.mjtObj.mjOBJ_SITE, model.nsite),
+        "njnt": np.int64(model.njnt),
+        "jnt_type": np.asarray(model.jnt_type, np.int32),
+        "nbody": np.int64(model.nbody),
+        "body_rootid": np.asarray(model.body_rootid, np.int32),
+        "body_weldid": np.asarray(model.body_weldid, np.int32),
+        "body_mocapid": np.asarray(model.body_mocapid, np.int32),
+        "body_pos": np.asarray(model.body_pos, np.float32),
+        "body_quat": np.asarray(model.body_quat, np.float32),
+        "body_ipos": np.asarray(model.body_ipos, np.float32),
+        "body_iquat": np.asarray(model.body_iquat, np.float32),
+        "nsite": np.int64(model.nsite),
+        "site_bodyid": np.asarray(model.site_bodyid, np.int32),
+        "site_pos": np.asarray(model.site_pos, np.float32),
+        "site_quat": np.asarray(model.site_quat, np.float32),
+    }
+
+
+def _usable(value) -> bool:
+    try:
+        arr = np.asarray(value)
+    except Exception:
+        return False
+    if arr.shape == ():
+        return arr.item() is not None
+    return arr.size > 0
 
 
 def quat_mul_wxyz(a: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -74,6 +115,27 @@ def yaw_quat_deg(deg: float, n: int) -> np.ndarray:
     q[:, 0] = np.cos(half)
     q[:, 3] = np.sin(half)
     return q
+
+
+def zero_start_xy(qpos: np.ndarray) -> np.ndarray:
+    """Translate the whole clip so the first root XY sits at the origin.
+
+    The environment does not honour the reference's absolute XY: `env.reset()`
+    zeroes the free-joint XY and keeps z, so the policy always starts at the
+    world origin (verified: a cache root of (-2.7865, -0.2782, 0.9558) resets to
+    (0, 0, 0.9558)). A reference that starts elsewhere therefore leaves the
+    policy a constant lateral offset from its own targets, and the imitation
+    reward pays for that offset for the whole episode.
+
+    The official KIT references happen to start within a few centimetres of the
+    origin, which is why the mismatch was invisible until a CMU clip was fitted.
+    A pure XY translation is physically irrelevant (gravity, ground and model are
+    translation invariant), so this cannot change the gait.
+    """
+    out = qpos.copy()
+    out[:, 0] -= qpos[0, 0]
+    out[:, 1] -= qpos[0, 1]
+    return out
 
 
 def rotate_qpos(qpos: np.ndarray, deg: float) -> np.ndarray:
@@ -108,8 +170,13 @@ def differentiate(model, qpos: np.ndarray, freq: float) -> np.ndarray:
 
 
 def write_variant(src: np.lib.npyio.NpzFile, model, qpos: np.ndarray, qvel: np.ndarray, out_path: Path, meta: dict) -> dict:
-    site_names = [str(n) for n in src["site_names"]]
-    body_names = [str(n) for n in src["body_names"]]
+    meta_model = model_metadata(model)
+    mimic_sites = [str(n) for n in meta_model["site_names"]]
+    body_names = [str(n) for n in meta_model["body_names"]]
+
+    from qc_retargeted import _mimic_site_names
+
+    site_names = _mimic_site_names()
     derived = recompute_derived(model, qpos, qvel, site_names, body_names)
     payload = {
         "qpos": qpos.astype(np.float32),
@@ -119,8 +186,10 @@ def write_variant(src: np.lib.npyio.NpzFile, model, qpos: np.ndarray, qvel: np.n
         "metadata": np.array(json.dumps(meta)),
         **{k: derived[k] for k in ("xpos", "xquat", "cvel", "subtree_com", "site_xpos", "site_xmat")},
     }
-    for f in COPY_FIELDS:
-        payload[f] = src[f]
+    payload["site_names"] = np.array(site_names)
+    payload["body_names"] = np.array(body_names)
+    for f in METADATA_FIELDS:
+        payload[f] = src[f] if (f in src.files and _usable(src[f])) else meta_model[f]
     np.savez_compressed(out_path, **payload)
 
     pel = derived["site_xpos"][:, site_names.index("pelvis_mimic"), :]
@@ -148,6 +217,12 @@ def main() -> int:
         help="output clip id stem; each angle becomes <out_name>_rot<angle>",
     )
     ap.add_argument("--out", default=None, help="output directory (default: the source cache dir)")
+    ap.add_argument(
+        "--no-zero-start-xy",
+        dest="zero_start_xy",
+        action="store_false",
+        help="keep the source's absolute start position (default: translate it to the origin)",
+    )
     ap.add_argument("--report", default="reports/rotate_reference.json")
     args = ap.parse_args()
 
@@ -189,6 +264,8 @@ def main() -> int:
     for deg in args.angles:
         name = f"{args.out_name}_rot{int(deg) % 360:03d}"
         qpos = rotate_qpos(qpos0, deg)
+        if args.zero_start_xy:
+            qpos = zero_start_xy(qpos)
         qvel = differentiate(model, qpos, freq)
         meta = {
             "created_by": "scripts/rotate_reference.py",
@@ -196,7 +273,8 @@ def main() -> int:
             "rotation_deg": float(deg),
             "frequency_hz": freq,
             "n_frames": int(len(qpos)),
-            "note": "rigid z-rotation of the whole reference; gait and joint angles are unchanged",
+            "start_xy_zeroed": bool(args.zero_start_xy),
+            "note": "rigid z-rotation (+ optional translation to origin); gait and joint angles are unchanged",
         }
         info = write_variant(src, model, qpos, qvel, out_dir / f"{name}.npz", meta)
         info.update({"clip": f"{Path(args.clip).parent}/{name}", "rotation_deg": deg, "name": name})

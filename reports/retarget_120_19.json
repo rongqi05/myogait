@@ -1,0 +1,67 @@
+{
+  "clip": "CMU/120/120_19_straight",
+  "amass_root": "/home/zrq/.musclemimic/AMASS",
+  "gmr": {
+    "src_human": "smplh",
+    "target_fps": 30,
+    "solver": "daqp",
+    "damping": 0.5,
+    "offset_to_ground": false,
+    "use_velocity_limit": false,
+    "verbose": false
+  },
+  "gates": {
+    "model": "pass",
+    "raw_clip": "pass",
+    "facing": "pass",
+    "body_model": "pass",
+    "retarget": "pass"
+  },
+  "raw": {
+    "file": "CMU/120/120_19_straight.npz",
+    "subject": "120",
+    "clip": "120_19_straight",
+    "frames": 1381,
+    "fps": 120.0,
+    "duration_s": 11.5,
+    "up_axis": 2,
+    "path_length_m": 4.9699606774403895,
+    "net_displacement_m": 4.884798973590395,
+    "mean_path_speed": 0.43217049369046867,
+    "max_turn_in_2s_deg": 29.888655380922188,
+    "moving_fraction": 0.9080376538740044,
+    "longest_straight_window": {
+      "start_s": 0.5333333333333333,
+      "end_s": 10.975,
+      "duration_s": 10.441666666666666,
+      "i": 64,
+      "j": 1317,
+      "net_displacement_m": 4.777181393568451,
+      "path_length_m": 4.83710268049947,
+      "mean_speed_mps": 0.45751138645507916,
+      "path_speed_mps": 0.46325005719069146,
+      "heading_range_deg": 34.57187078420489,
+      "straightness": 0.9876121532063836
+    },
+    "is_10s": true,
+    "is_20s": false,
+    "is_straight_10s": true,
+    "is_straight_20s": false,
+    "is_usable_10s": false
+  },
+  "facing": {
+    "clip": "120_19_straight",
+    "verdict": "FORWARD",
+    "toes_dot_travel": {
+      "left": 0.9161425828933716,
+      "right": 0.8951535820960999
+    },
+    "net_displacement_m": 4.884799003601074,
+    "up_axis": 2,
+    "frames": 1381,
+    "frames_used": 1381
+  },
+  "retarget_seconds": 10.285240650177002,
+  "cache_path": "/home/zrq/.musclemimic/caches/AMASS/MyoFullBody/gmr/CMU/120/120_19_straight.npz",
+  "cache_exists": true
+}

@@ -1,0 +1,17 @@
+{
+  "source_clip": "CMU/120/120_19_poses",
+  "out_clip": "CMU/120/120_19_straight",
+  "fps": 120.0,
+  "source_frames": 12792,
+  "frame_range": [
+    5796,
+    7177
+  ],
+  "window_s": [
+    48.3,
+    59.8
+  ],
+  "out_frames": 1381,
+  "duration_s": 11.5,
+  "method": "contiguous frame slice, no interpolation, no blending"
+}

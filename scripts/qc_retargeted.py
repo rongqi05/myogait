@@ -34,26 +34,81 @@ EXPECTED_NQ, EXPECTED_NV, EXPECTED_SITES = 89, 88, 17
 FOOT_SITES = ("left_ankle_mimic", "left_toes_mimic", "right_ankle_mimic", "right_toes_mimic")
 JOINT_JUMP_DEG_PER_FRAME = 20.0  # a hinge rotating this fast in one frame is a snap
 ROOT_ROT_JUMP_DEG_PER_FRAME = 20.0  # a pelvis rotating this fast in one frame is a snap
+CONTACT_BAND_M = 0.02  # foot counts as down within 2 cm of its own lowest point
+START_XY_TOL_M = 0.10  # env.reset() zeroes root XY, so the reference must start near the origin
 ROOT_TELEPORT_FACTOR = 3.0  # root step vs median step
+
+
+def _fk_site_positions(qpos: np.ndarray, qvel: np.ndarray) -> tuple[list[str], np.ndarray]:
+    """Forward-kinematics pelvis/site positions from qpos.
+
+    A cache written by the GMR path stores only qpos/qvel and leaves the derived
+    arrays empty: the trajectory loader materialises them with MuJoCo at load
+    time. Doing the same here means the QC numbers are computed from exactly the
+    quantities the environment will see, rather than from a different file's
+    cached copies.
+    """
+    import mujoco
+
+    from prepare_straight_walk import build_model
+
+    model = build_model(expect_nq=qpos.shape[1])
+    env_sites = _mimic_site_names()
+    sids = [mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, n) for n in env_sites]
+    if any(i < 0 for i in sids):
+        raise SystemExit(f"model is missing some mimic sites: {env_sites}")
+
+    data = mujoco.MjData(model)
+    out = np.zeros((len(qpos), len(sids), 3))
+    for i in range(len(qpos)):
+        data.qpos[:] = qpos[i]
+        data.qvel[:] = qvel[i]
+        mujoco.mj_forward(model, data)
+        out[i] = data.site_xpos[sids]
+    return env_sites, out
+
+
+def _mimic_site_names() -> list[str]:
+    from musclemimic.environments.humanoids.myofullbody import MyoFullBody
+
+    return list(MyoFullBody(disable_fingers=True, headless=True).sites_for_mimic)
 
 
 def load_clip(path: Path) -> dict:
     d = np.load(path, allow_pickle=True)
-    names = [str(n) for n in d["site_names"]]
     freq = float(d["frequency"])
+    qpos = np.asarray(d["qpos"], np.float64)
+    qvel = np.asarray(d["qvel"], np.float64) if "qvel" in d.files else np.zeros((len(qpos), qpos.shape[1] - 1))
+
+    have_derived = "site_xpos" in d.files and np.asarray(d["site_xpos"]).size > 0
+    if have_derived and "site_names" in d.files and np.asarray(d["site_names"]).shape != ():
+        names = [str(n) for n in d["site_names"]]
+        site_xpos = np.asarray(d["site_xpos"], np.float64)
+        source = "cached"
+    else:
+        names, site_xpos = _fk_site_positions(qpos, qvel)
+        source = "recomputed (cache stores qpos/qvel only)"
+
+    meta = d["metadata"] if "metadata" in d.files else None
+    meta_str = ""
+    if meta is not None and np.asarray(meta).shape == ():
+        value = np.asarray(meta).item()
+        meta_str = str(value) if value is not None else ""
+
     return {
         "path": path,
         "freq": freq,
-        "t": np.arange(d["qpos"].shape[0]) / freq,
-        "qpos": np.asarray(d["qpos"], np.float64),
-        "qvel": np.asarray(d["qvel"], np.float64),
-        "site_xpos": np.asarray(d["site_xpos"], np.float64),
+        "t": np.arange(qpos.shape[0]) / freq,
+        "qpos": qpos,
+        "qvel": qvel,
+        "site_xpos": site_xpos,
         "site_names": names,
-        "joint_names": [str(n) for n in d["joint_names"]],
-        "jnt_type": np.asarray(d["jnt_type"]),
-        "split_points": np.asarray(d["split_points"]),
-        "metadata": str(d["metadata"]) if "metadata" in d else "",
-        "raw_keys": list(d.keys()),
+        "joint_names": [str(n) for n in d["joint_names"]] if "joint_names" in d.files else [],
+        "jnt_type": np.asarray(d["jnt_type"]) if "jnt_type" in d.files else np.zeros(len(qpos[0]), int),
+        "split_points": np.asarray(d["split_points"]) if "split_points" in d.files else np.array([0, len(qpos)]),
+        "metadata": meta_str,
+        "derived_source": source,
+        "raw_keys": d.files,
     }
 
 
@@ -222,8 +277,16 @@ def check_root(c: dict) -> dict:
     worst_at = int(step.argmax()) + 1 if step.size else 0
     quat = c["qpos"][:, 3:7]
     qnorm = np.linalg.norm(quat, axis=1)
+
+    # env.reset() zeroes the free-joint XY, so the policy always starts at the
+    # world origin while the reference keeps its own absolute position. A
+    # reference that does not start near the origin therefore hands the policy a
+    # constant offset from its own targets for the whole episode.
+    start_offset = float(np.hypot(root[0, 0], root[0, 1]))
     return {
         "ok": bool(worst <= max(median * ROOT_TELEPORT_FACTOR, 0.05)),
+        "start_xy_offset_from_origin_m": round(start_offset, 4),
+        "start_xy_ok": bool(start_offset <= START_XY_TOL_M),
         "root_z_min_m": float(root[:, 2].min()),
         "root_z_range_m": float(np.ptp(root[:, 2])),
         "max_step_m": worst,
@@ -265,6 +328,37 @@ def check_root_rotation(c: dict) -> dict:
     }
 
 
+def check_contact(c: dict) -> dict:
+    """Gait events from foot-site height.
+
+    The reference carries no contact forces, so contact is inferred the same way
+    the straightness audit does it: a foot counts as down while its site sits
+    within a band above its own lowest point. Reporting onsets and the support
+    fraction is what separates "walking" from "sliding along in a fixed pose".
+    """
+    feet = pelvis_and_feet(c)["feet"]
+    ankle = {k: v for k, v in feet.items() if "ankle" in k}
+    down = {}
+    for name, xyz in ankle.items():
+        z = xyz[:, 2]
+        down[name] = z < z.min() + CONTACT_BAND_M
+    onsets = {k: int(np.count_nonzero(np.diff(v.astype(np.int8)) == 1)) for k, v in down.items()}
+    any_down = np.zeros(len(c["t"]), bool)
+    for v in down.values():
+        any_down |= v
+    both_down = np.ones(len(c["t"]), bool)
+    for v in down.values():
+        both_down &= v
+    return {
+        "ok": bool(min(onsets.values()) >= 2),
+        "band_m": CONTACT_BAND_M,
+        "foot_contact_onsets": onsets,
+        "support_fraction": round(float(any_down.mean()), 4),
+        "double_support_fraction": round(float(both_down.mean()), 4),
+        "step_period_s": round(len(c["t"]) / c["freq"] / max(1, sum(onsets.values()) / max(1, len(onsets))), 4),
+    }
+
+
 def check_split_points(c: dict) -> dict:
     """split_points mark where several clips were concatenated into one cache."""
     sp = c["split_points"]
@@ -285,6 +379,57 @@ def check_sites(c: dict) -> dict:
     return {"ok": not missing, "n_sites": len(names), "missing": missing}
 
 
+def compare_with_raw(clip: str, amass_root: Path, retargeted_window: dict, c: dict) -> dict | None:
+    """Did the retargeted clip keep the raw clip's straight window and speed?
+
+    The raw clip is measured on the SMPL-H root translation; the retargeted clip
+    on the pelvis site. They are different points on the body, so the absolute
+    values are not expected to match exactly -- what matters is whether the long
+    straight window and the walking speed survive the retargeting. A raw window
+    of 11.6 s that comes out of the fit as 8 s means the reference is no longer
+    usable, no matter how clean the raw data was.
+    """
+    raw_path = amass_root / f"{clip}.npz"
+    if not raw_path.exists():
+        return None
+    from amass_kit_audit import analyse as analyse_raw
+
+    with np.load(raw_path, allow_pickle=True) as d:
+        trans = np.asarray(d["trans"], dtype=np.float64)
+        fps = float(d["mocap_framerate"])
+    raw = analyse_raw(f"{clip}.npz", trans, fps)
+    rw = raw["longest_straight_window"]
+
+    rows = [
+        ("duration_s", raw["duration_s"], float(c["t"][-1])),
+        ("straight_window_s", rw["duration_s"], retargeted_window["duration_s"]),
+        ("window_net_m", rw["net_displacement_m"], retargeted_window["net_displacement_m"]),
+        ("window_speed_mps", rw["mean_speed_mps"], retargeted_window["mean_speed_mps"]),
+        ("window_straightness", rw["straightness"], retargeted_window["straightness"]),
+        ("clip_mean_speed_mps", raw["mean_path_speed"], retargeted_window["clip_mean_speed_mps"]),
+    ]
+    table = [{"quantity": n, "raw": round(float(a), 4), "retargeted": round(float(b), 4),
+              "delta": round(float(b) - float(a), 4)} for n, a, b in rows]
+    return {
+        "raw_path": str(raw_path),
+        "raw_fps": fps,
+        "raw_window_s": [rw["start_s"], rw["end_s"]],
+        "retargeted_window_s": [retargeted_window["start_s"], retargeted_window["end_s"]],
+        "table": table,
+        "survived": {
+            "straight_window_ge_10s_after": bool(retargeted_window["duration_s"] >= 10.0),
+            "window_shrank_over_10pct": bool(
+                retargeted_window["duration_s"] < 0.9 * rw["duration_s"]
+            ),
+            "speed_changed_over_10pct": bool(
+                rw["mean_speed_mps"] > 0
+                and abs(retargeted_window["mean_speed_mps"] - rw["mean_speed_mps"])
+                > 0.1 * rw["mean_speed_mps"]
+            ),
+        },
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--clip", required=True, help="cache-relative clip id, e.g. CMU/136/136_25_poses")
@@ -292,6 +437,13 @@ def main() -> int:
     ap.add_argument("--env", default="MyoFullBody")
     ap.add_argument("--method", default="gmr")
     ap.add_argument("--out", default=None, help="JSON output path (default: reports/qc_<clip>.json)")
+    ap.add_argument(
+        "--compare-raw",
+        nargs="?",
+        const="__same__",
+        default=None,
+        help="also compare against the raw AMASS clip (default id: same as --clip)",
+    )
     args = ap.parse_args()
 
     path = Path(args.cache_root).expanduser() / args.env / args.method / f"{args.clip}.npz"
@@ -317,6 +469,7 @@ def main() -> int:
             "root_rotation": check_root_rotation(c),
             "joint_jumps": check_joint_jumps(c),
             "foot_height": check_foot_height(c),
+            "contact": check_contact(c),
             "split_points": check_split_points(c),
         },
         "window": window_metrics(c),
@@ -325,6 +478,16 @@ def main() -> int:
     report["checks"]["foot_slip"] = report["foot_slip"]
 
     w = report["window"]
+
+    if args.compare_raw is not None:
+        raw_clip = args.clip if args.compare_raw == "__same__" else args.compare_raw
+        from loco_mujoco.smpl import retargeting as _R
+
+        cmp_ = compare_with_raw(raw_clip, Path(_R.get_amass_dataset_path()), w, c)
+        if cmp_ is None:
+            report["raw_comparison"] = {"error": f"raw clip not found for {raw_clip}"}
+        else:
+            report["raw_comparison"] = cmp_
     report["verdict"] = {
         "duration_ge_10s": bool(dur >= 10.0),
         "straight_window_ge_10s": bool(w["duration_s"] >= 10.0),
@@ -339,6 +502,7 @@ def main() -> int:
             and report["checks"]["joint_jumps"]["ok"]
         ),
         "single_segment": bool(not report["checks"]["split_points"]["concatenated"]),
+        "starts_near_origin": bool(report["checks"]["root"]["start_xy_ok"]),
     }
 
     _print_report(report)
@@ -371,7 +535,7 @@ def _print_report(r: dict) -> None:
         print("  per-0.5 s speed (m/s): " + " ".join(f"{p['mean']:.2f}" for p in prof))
 
     print("\n[checks]")
-    for key in ("finite", "shape", "sites", "root", "root_rotation", "joint_jumps", "foot_height"):
+    for key in ("finite", "shape", "sites", "root", "root_rotation", "joint_jumps", "foot_height", "contact"):
         v = r["checks"][key]
         print(f"  {'PASS' if v.get('ok', True) else 'FAIL'}  {key}: {json.dumps({k: x for k, x in v.items() if k != 'ok'})}")
 
@@ -388,6 +552,28 @@ def _print_report(r: dict) -> None:
             cells.append(f"{e['slip_speed_mps']:.3f}@{e['planted_fraction'] * 100:4.1f}%")
         print(f"  {name:22s} " + "  ".join(f"{c:>16s}" for c in cells))
     print("  (value@fraction: slip speed in m/s @ planted fraction; wide bands mix in swing pass-through)")
+
+    rc = r.get("raw_comparison")
+    if rc is not None:
+        print("\n[raw -> retargeted]")
+        if "error" in rc:
+            print(f"  {rc['error']}")
+        else:
+            print(f"  raw window {rc['raw_window_s'][0]:.2f}-{rc['raw_window_s'][1]:.2f} s, "
+                  f"retargeted window {rc['retargeted_window_s'][0]:.2f}-{rc['retargeted_window_s'][1]:.2f} s")
+            print(f"  {'quantity':24s} {'raw':>10s} {'retargeted':>11s} {'delta':>9s}")
+            for row in rc["table"]:
+                print(f"  {row['quantity']:24s} {row['raw']:10.4f} {row['retargeted']:11.4f} {row['delta']:+9.4f}")
+            for k, v in rc["survived"].items():
+                print(f"  {'FLAG' if v else 'OK  '}  {k}: {v}")
+
+    if not r["checks"]["root"]["start_xy_ok"]:
+        print(
+            f"\nWARNING: reference starts {r['checks']['root']['start_xy_offset_from_origin_m']:.3f} m from the origin. "
+            "env.reset() zeroes the policy root XY, so every rollout would begin with that constant offset "
+            "against the reference targets. Translate the clip to the origin first "
+            "(scripts/rotate_reference.py does this by default)."
+        )
 
     print("\n[verdict]")
     for k, v in r["verdict"].items():

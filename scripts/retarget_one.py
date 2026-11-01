@@ -117,6 +117,28 @@ def gate_raw_clip(clip: str, amass_root: Path) -> dict:
     return row
 
 
+def gate_facing(clip: str, amass_root: Path, smpl_root: Path) -> dict:
+    """The straightness audit only sees the root path, not which way the body faces.
+
+    A backward-walking trial passes every geometric check and then produces a
+    reference whose feet point against the direction of travel, which the policy
+    cannot track (measured: 18/20 falls). Checking facing before spending a
+    retarget keeps that class of clip out of the pipeline.
+    """
+    from amass_facing import facing
+
+    row = facing(amass_root / f"{clip}.npz", smpl_root)
+    dots = row.get("toes_dot_travel", {})
+    detail = " ".join(f"{k}={v:+.3f}" for k, v in dots.items())
+    print(f"  toes vs travel: {detail} -> {row['verdict']}")
+    if row["verdict"] != "FORWARD":
+        raise RuntimeError(
+            f"clip is {row['verdict']} (toes·travel {detail}); "
+            "a backward-walking clip cannot serve as a forward-walking reference"
+        )
+    return row
+
+
 def gate_body_model(smpl_root: Path) -> None:
     from loco_mujoco.smpl import retargeting as R
 
@@ -170,7 +192,15 @@ def main() -> int:
         summary["gates"]["raw_clip"] = f"fail: {exc}"
         return fail("raw_clip", str(exc))
 
-    print("\n[gate 3] SMPL-H body model")
+    print("\n[gate 3] clip walks forward")
+    try:
+        summary["facing"] = gate_facing(args.clip, amass_root, smpl_root)
+        summary["gates"]["facing"] = "pass"
+    except Exception as exc:
+        summary["gates"]["facing"] = f"fail: {exc}"
+        return fail("facing", str(exc))
+
+    print("\n[gate 4] SMPL-H body model")
     try:
         gate_body_model(smpl_root)
         summary["gates"]["body_model"] = "pass"
