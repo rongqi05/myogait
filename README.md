@@ -97,10 +97,27 @@ scripts/rotation_bias_report.py  判定 body-fixed / world-fixed / 朝向依赖
 scripts/check_gmr_toolchain.py / setup_gmr_env.sh   .venv-gmr 工具链安装与 14 项自检
 ```
 
-> 单条 `CMU/136/136_25_poses`（原始 14.90 s、直行窗 11.64 s、0.507 m/s）的重定向
-> **尚未执行**：前置关卡 1（模型 1.0.5）与 2（原始片段够长够直）已通过，
-> 卡在 `~/.musclemimic/smpl/SMPLH_NEUTRAL.pkl`——SMPL-H 人体模型许可受限，
-> 需在 <https://mano.is.tue.mpg.de/download.php> 用本人账号接受协议后合成。
+### SMPL-H 与 CMU 重定向（2026-11-01）
+
+官方授权的 SMPL-H / MANO 已到位，`SMPLH_NEUTRAL.pkl` 由
+`scripts/build_smplh_neutral.py` 合成（**不需要 conda/chumpy**），
+`smplx.SMPLH` 前向校验通过（6890 顶点 / 73 关节）。
+
+- `CMU/136/136_25` **重定向成功**且几何完整保留（直行窗 11.6417 → 11.6500 s，
+  速度 0.5067 → 0.5056 m/s，根朝向 0.51°/帧，0 帧穿地）。
+- **但该片段被拒绝**：它是**倒退行走**——踝→趾方向与前进方向点积 **−0.941/−0.920**
+  （KIT 参考为 +0.975/+0.946），原始 AMASS 文件用 SMPL-H FK 也是 −0.941。
+  回放结果 2/20、18 次跌倒、progress −2.13、航向误差 93.6°。
+- 由此补上一道关卡：`scripts/amass_facing.py`（FK 判定，与坐标约定无关）成为
+  `retarget_one.py` 的 **gate 3**，倒退片段直接拒绝。
+- 顺带发现一个环境陷阱：`env.reset()` 会把自由关节 XY 归零，所以参考**必须从原点起步**；
+  KIT 参考恰好都在原点 3 cm 内，CMU 这条偏 2.8 m。QC 现在会检查。
+- 替代参考 `cmu120_19_straight_h000`（正向、10.41 s、从原点起步）已重定向并 QC 通过，
+  回放 **11/20、9 次跌倒**；与 KIT 参考（20/20、0 摔倒）相比，
+  几何/朝向/起点/checkpoint/协议全部相同，**只有参考速度不同**（0.464 vs 0.884 m/s）。
+
+> **当前识别出的真正瓶颈是参考步速**，不是数据直线度。详见
+> [`reports/M_smplh_and_cmu_facing.md`](./reports/M_smplh_and_cmu_facing.md) M.8bis。
 
 ## 环境（已冻结）
 
@@ -283,6 +300,9 @@ scripts/
   three_way_report.py    A 走满 / B 跟随参考 / C 通过验收，逐回合报告 + 俯视图
   rotate_reference.py    参考的刚性 z 旋转（校验平移不变性 + rot000 逐位复现）
   rotation_bias_report.py  body-fixed / world-fixed / 朝向依赖 判定
+  build_smplh_neutral.py  由官方 SMPL-H + MANO 合成 SMPLH_NEUTRAL.pkl（无需 conda/chumpy）
+  amass_facing.py         正向/倒退行走判定（SMPL-H FK，与坐标约定无关）
+  slice_amass_clip.py     连续帧切片（无插值/无混合）
   check_gmr_toolchain.py .venv-gmr 的 14 项自检（含 1.0.5 膝约束符号模式）
   setup_gmr_env.sh       重建 .venv-gmr 并回退 musclemimic_models 到 1.0.5
   amass_kit_audit.py     流式审计 AMASS .tar.bz2（不解压）：时长/直行窗/速度
