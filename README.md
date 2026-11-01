@@ -62,6 +62,32 @@ scripts/check_muscle_chain.py      肌肉力链路证据
 scripts/bench_train_gpu.sh         吞吐/显存基准
 ```
 
+## 三个问题必须分开回答（2026-11-01）
+
+"走满 10 s"、"跟住参考"、"通过冻结验收"是三个不同的问题，答案确实不同。
+详见 [`reports/K_retarget_blocker_and_three_way.md`](./reports/K_retarget_blocker_and_three_way.md)。
+
+| 参考 | A 走满 10 s | B 跟随参考 | C 通过冻结验收 |
+|---|---:|---:|---:|
+| `straight_stitched_10s`（拼接） | 19/20 | 0/20 | 0/20 |
+| `walk_6m_straight_line06`（未拼接，直行仅 6.84 s） | 20/20 | 4/20 | 3/20 |
+
+失效机理已定位：**不是跌倒、不是航向错误（平均 8.6°）、不是速度不足**，而是
+**持续性单侧侧移**——20/20 种子漂移方向相同，等效约 6.5° "蟹行"，10 s 累积 0.79 m，
+且 `corr(侧向漂移, 最大侧偏) = −0.975`。
+
+```bash
+scripts/retarget_one.py      单条 AMASS → MyoFullBody 重定向（3 道前置关卡，冻结 GMR 参数）
+scripts/qc_retargeted.py     重定向产物 QC（数值/根节点/关节突变/足高/足滑/拼接段）
+scripts/three_way_report.py  A/B/C 三问分开报告 + 逐回合俯视图
+scripts/check_gmr_toolchain.py / setup_gmr_env.sh   .venv-gmr 工具链安装与 14 项自检
+```
+
+> 单条 `CMU/136/136_25_poses`（原始 14.90 s、直行窗 11.64 s、0.507 m/s）的重定向
+> **尚未执行**：前置关卡 1（模型 1.0.5）与 2（原始片段够长够直）已通过，
+> 卡在 `~/.musclemimic/smpl/SMPLH_NEUTRAL.pkl`——SMPL-H 人体模型许可受限，
+> 需在 <https://mano.is.tue.mpg.de/download.php> 用本人账号接受协议后合成。
+
 ## 环境（已冻结）
 
 | 组件 | 版本 |
@@ -71,8 +97,20 @@ scripts/bench_train_gpu.sh         吞吐/显存基准
 | **musclemimic_models** | **1.0.5** (`ba69358c6333692d547836b903f051fe6a8e9cc9`) — 必须固定，1.0.6 会跌倒 |
 | MuJoCo | 3.4.0（CPU） |
 | numpy / jax / flax | 2.2.6 / 0.7.2 / 0.12.0 |
-| 后端 | 纯 MuJoCo CPU（本机无 GPU） |
+| 后端 | 纯 MuJoCo CPU（验收）；warp/CUDA 仅用于训练（`.venv-train`） |
 | checkpoint | `amathislab/mm-10m-2`, update 12500, digest `c8c7a964…` |
+
+三个环境，职责固定互不污染（`.gitignore` 已忽略后两个）：
+
+| 环境 | 用途 | jax | torch |
+|---|---|---|---|
+| `.venv` | **冻结的验收环境**（`eval_walk.py`、A/B/C 三问报告） | CPU | 无 |
+| `.venv-train` | PPO + warp 训练 | CUDA12 | 无 |
+| `.venv-gmr` | GMR-Fit 重定向（纯 IK，不占显存） | CPU | **CPU-only** |
+
+`.venv-gmr` 由 `bash scripts/setup_gmr_env.sh` 重建；它会强制把 `musclemimic_models`
+回退到 1.0.5，并用 `scripts/check_gmr_toolchain.py` 校验膝约束符号模式。
+GPU：RTX 5060 Laptop 8 GB（sm_120），驱动已加载，EGL 离屏渲染可用。
 
 ### 安装
 
@@ -226,6 +264,12 @@ scripts/
   motion_stats.py        参考片段的时长、速度、连续行走段
   eval_walk.py           C：单 episode、无中途 reset 的验收 + 逐帧日志 + 视频
   make_table.py          从 run 目录生成逐 seed markdown 表
+  retarget_one.py        单条 AMASS → MyoFullBody（GMR-Fit），3 道前置关卡
+  qc_retargeted.py       重定向产物 QC：数值/根节点/关节突变/足高/足滑/拼接段
+  three_way_report.py    A 走满 / B 跟随参考 / C 通过验收，逐回合报告 + 俯视图
+  check_gmr_toolchain.py .venv-gmr 的 14 项自检（含 1.0.5 膝约束符号模式）
+  setup_gmr_env.sh       重建 .venv-gmr 并回退 musclemimic_models 到 1.0.5
+  amass_kit_audit.py     流式审计 AMASS .tar.bz2（不解压）：时长/直行窗/速度
   after_access_10s.sh    取得 gated 数据后的一键 10 s 验收（含前置校验）
   run_suite.sh           本次全部 6 组、67 个 rollout 的顺序复现
   dump_reset_state.py    D：记录 reset 后的 qpos/qvel/obs（版本对比用）
@@ -250,9 +294,10 @@ artifacts/               checkpoint 与动作缓存（不入 git）
 
 ## 资源
 
-- 单进程顺序评估，峰值 RSS 2.5–4.6 GB；无 swap，无并行训练。
-- 每 seed 约 12 s（含环境构建），20 seed 约 4 分钟。
-- 视频渲染用 `MUJOCO_GL=egl`（软件 EGL，可渲染但会打印 MESA 警告）。
+- 单进程顺序评估，峰值 RSS 2.5–4.6 GB（实测 30 GiB / 0 swap 下两组 × 20 种子无压力）；无并行训练。
+- 每 seed 约 15–21 s（含环境构建），20 seed 约 5 分钟；两组顺序跑约 10 分钟。
+- 视频渲染用 `MUJOCO_GL=egl`（GPU 可用时为硬件 EGL）。
+- `.venv` 1.8 GB · `.venv-train` 6.6 GB · `.venv-gmr` 2.5 GB。
 
 ## 环境维护（2026-10-31）
 
@@ -271,6 +316,13 @@ artifacts/               checkpoint 与动作缓存（不入 git）
 
 - 未使用 MyoSuite 的 MuscleMimic 集成路径，未核实其“缺少策略文件时回退到参考轨迹回放”的分支；
   本仓库一律以官方 `fullbody/eval.py` 为基线。
-- 无 GPU，未测试 MJX / warp 后端。
 - checkpoint 未记录训练时的 `musclemimic_models` 版本；“1.0.5 是配对版本”依据是 MyoSuite 文档
   + 本仓库的配对回放行为差异。
+- **`SMPLH_NEUTRAL.pkl` 缺失**，因此单条 `CMU/136/136_25_poses` 的 GMR 重定向从未跑通。
+  已验证的只有前置关卡（1.0.5 变体、原始片段 11.64 s 直行）与工具链本身；
+  `fit_gmr_motion()` 之后的 SMPL 前向、500 次 shape fitting、mink IK 全流程**尚未执行过**。
+- `qc_retargeted.py` 的足滑指标是**高度阈值代理**（参考轨迹没有接触力），
+  5 mm 带下参考自身滑步 0.06–0.11 m/s；宽阈值会混入摆动掠过帧，因此报告敏感性而非单一值。
+- 策略的足滑另由 `eval_walk.py` 用接触法向力 >20 N 判定，与参考的口径不同，不可直接相减。
+- 未拼接参考的改善**不能**归因于“去掉拼接”：两条参考的速度（0.883 vs 0.834 m/s）
+  与几何（后者 10 s 窗口内直行仅 3.66–10.00 s）都不同。
