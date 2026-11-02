@@ -32,7 +32,14 @@ import jax.numpy as jnp
 import mujoco
 import numpy as np
 
-from _env_builder import build_eval_bundle, env_data, env_model, quat_to_tilt_deg, scale_muscle_f0
+from _env_builder import (
+    build_eval_bundle,
+    env_data,
+    env_model,
+    quat_to_tilt_deg,
+    scale_muscle_f0,
+    scale_muscle_groups,
+)
 
 # ---------------------------------------------------------------------------
 # success thresholds (frozen for this baseline study)
@@ -213,6 +220,10 @@ def rollout(
     perturb_seed: int = 0,
     f0_left: float = 1.0,
     f0_right: float = 1.0,
+    f0_left_upper: float = 1.0,
+    f0_left_lower: float = 1.0,
+    f0_right_upper: float = 1.0,
+    f0_right_lower: float = 1.0,
 ) -> dict:
     deterministic = mode == "deterministic"
     t_build = time.time()
@@ -226,7 +237,22 @@ def rollout(
     )
     env = bundle.env
     model = env_model(env)
-    f0_info = scale_muscle_f0(model, left=f0_left, right=f0_right)
+
+    # Apply F0 scaling.  Each rollout builds a fresh MjModel (no cross-run
+    # accumulation).  The legacy --f0_left/--f0_right scales the whole '_l'/'_r'
+    # set (torso+leg); the region args scale specific anatomical groups.  Do not
+    # combine both mechanisms on the same side in one run (they compose).
+    f0_info: dict = {}
+    if f0_left != 1.0 or f0_right != 1.0:
+        f0_info.update(scale_muscle_f0(model, left=f0_left, right=f0_right))
+    region_scales = {
+        "left_upper": f0_left_upper,
+        "left_lower": f0_left_lower,
+        "right_upper": f0_right_upper,
+        "right_lower": f0_right_lower,
+    }
+    if any(v != 1.0 for v in region_scales.values()):
+        f0_info.update(scale_muscle_groups(model, **{k: v for k, v in region_scales.items() if v != 1.0}))
     data = env_data(env)
     policy_fn = make_policy_fn(bundle.agent_conf, deterministic)
     probe = TerminationProbe(env)
@@ -743,6 +769,10 @@ def rollout(
         "ref_end_phase": float(ref_phase),
         "f0_left": f0_left,
         "f0_right": f0_right,
+        "f0_left_upper": f0_left_upper,
+        "f0_left_lower": f0_left_lower,
+        "f0_right_upper": f0_right_upper,
+        "f0_right_lower": f0_right_lower,
         "f0_scaling_info": f0_info,
         "wall_time_s": time.time() - t0,
         "build_time_s": t0 - t_build,
@@ -841,13 +871,37 @@ def main() -> int:
         "--f0_left",
         type=float,
         default=1.0,
-        help="scale max isometric force (F0) of all '_l' muscles (hemiparesis knob)",
+        help="LEGACY: scale F0 of all '_l' muscles (torso+leg, 145; arm muscles untouched)",
     )
     ap.add_argument(
         "--f0_right",
         type=float,
         default=1.0,
-        help="scale max isometric force (F0) of all '_r' muscles (hemiparesis knob)",
+        help="LEGACY: scale F0 of all '_r' muscles (torso+leg, 145; arm muscles untouched)",
+    )
+    ap.add_argument(
+        "--f0_left_upper",
+        type=float,
+        default=1.0,
+        help="scale F0 of the 32 left-arm muscles only ('_left' suffix)",
+    )
+    ap.add_argument(
+        "--f0_left_lower",
+        type=float,
+        default=1.0,
+        help="scale F0 of the 40 left-leg muscles only ('_l' leg muscles)",
+    )
+    ap.add_argument(
+        "--f0_right_upper",
+        type=float,
+        default=1.0,
+        help="scale F0 of the 32 right-arm muscles only (no-suffix arm muscles)",
+    )
+    ap.add_argument(
+        "--f0_right_lower",
+        type=float,
+        default=1.0,
+        help="scale F0 of the 40 right-leg muscles only ('_r' leg muscles)",
     )
     ap.add_argument(
         "--horizon",
@@ -878,6 +932,10 @@ def main() -> int:
             perturb_seed=args.perturb_seed,
             f0_left=args.f0_left,
             f0_right=args.f0_right,
+            f0_left_upper=args.f0_left_upper,
+            f0_left_lower=args.f0_left_lower,
+            f0_right_upper=args.f0_right_upper,
+            f0_right_lower=args.f0_right_lower,
         )
         results.append(r)
         print(

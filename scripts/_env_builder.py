@@ -119,21 +119,125 @@ def env_model(env: Any):
     raise RuntimeError("could not locate MjModel on environment")
 
 
-def scale_muscle_f0(model, left: float = 1.0, right: float = 1.0) -> dict:
-    """Scale the max isometric force (F0) of one or both sides of the body.
+_MUSCLE_GROUPS_CACHE: dict | None = None
 
-    MyoFullBody muscles are named with a ``_l`` / ``_r`` suffix (145 pairs) plus
-    64 midline muscles with no suffix. ``actuator_gainprm[i, 0]`` is the F0 of
-    the MuJoCo muscle actuator (``gaintype="muscle"``), so scaling it is the
-    standard way to model unilateral weakness -- exactly the knob the later
-    hemiparesis experiments will turn.
 
-    Only the two body sides are touched; midline muscles keep their original F0.
-    Must be called after ``env_model`` and before the first ``env.reset()`` so
-    every subsequent ``mj_forward`` uses the scaled gains.
+def muscle_groups(model) -> dict:
+    """Classify all actuators into anatomical groups using the installed
+    ``musclemimic_models`` XML (source of truth for the model version).
+
+    MyoFullBody (model v1.0.5, ``disable_fingers=True``) exposes 354 actuators:
+
+    * 210 torso/spine muscles -- ``myotorso_assets.xml`` (105 ``_l`` + 105 ``_r``)
+    *  80 leg muscles         -- ``myolegs_muscle.xml``  ( 40 ``_l`` +  40 ``_r``)
+    *  64 arm muscles         -- ``myoarm_bimanual_assets.xml``:
+        32 right = 24 ``<general>`` upper-arm + 8 ``<muscle>`` forearm, no suffix;
+        32 left  = the same with a ``_left`` suffix.
+
+    Note the asymmetric naming convention: legs/torso use ``_l``/``_r`` while the
+    arms use ``_left`` for the left side and *no suffix* for the right side.  A
+    name-prefix heuristic would therefore miss the 32 left-arm muscles.
+
+    Returns ``{group: {"indices": [...], "names": [...]}}`` for the six groups
+    ``left_upper``, ``right_upper``, ``left_lower``, ``right_lower``,
+    ``left_trunk``, ``right_trunk``.
     """
+    global _MUSCLE_GROUPS_CACHE
+    if _MUSCLE_GROUPS_CACHE is not None:
+        return _MUSCLE_GROUPS_CACHE
+
+    import pathlib
     import re
 
+    import mujoco
+
+    names = [mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_ACTUATOR, i) for i in range(model.nu)]
+
+    try:
+        import musclemimic_models  # type: ignore
+
+        model_dir = pathlib.Path(musclemimic_models.__file__).parent / "model"
+    except Exception:  # pragma: no cover - fallback to name heuristics
+        model_dir = None
+
+    def _tag_names(path: pathlib.Path) -> set[str]:
+        text = path.read_text(errors="ignore")
+        found = set()
+        for pat in (r"<general\b[^>]*>", r"<muscle\b[^>]*>"):
+            for m in re.finditer(pat, text):
+                nm = re.search(r'name="([^"]+)"', m.group(0))
+                if nm:
+                    found.add(nm.group(1))
+        return found
+
+    arm_tags = _tag_names(model_dir / "arm" / "assets" / "myoarm_bimanual_assets.xml")
+    leg_tags = _tag_names(model_dir / "leg" / "assets" / "myolegs_muscle.xml")
+    torso_tags = _tag_names(model_dir / "torso" / "assets" / "myotorso_assets.xml")
+
+    groups = {
+        key: {"indices": [], "names": []}
+        for key in ("left_upper", "right_upper", "left_lower", "right_lower", "left_trunk", "right_trunk")
+    }
+    for i, name in enumerate(names):
+        if name in arm_tags:
+            key = "left_upper" if name.endswith("_left") else "right_upper"
+        elif name in leg_tags:
+            key = "left_lower" if name.endswith("_l") else "right_lower"
+        elif name in torso_tags:
+            key = "left_trunk" if name.endswith("_l") else "right_trunk"
+        else:  # pragma: no cover - should not happen for a matched model version
+            raise ValueError(f"unclassified actuator {i}: {name}")
+        groups[key]["indices"].append(i)
+        groups[key]["names"].append(name)
+
+    _MUSCLE_GROUPS_CACHE = groups
+    return groups
+
+
+def scale_muscle_groups(model, **scales: float) -> dict:
+    """Scale F0 of specific anatomical muscle groups (see :func:`muscle_groups`).
+
+    ``scales`` maps a group name to a multiplier, e.g.
+    ``scale_muscle_groups(model, left_lower=0.7, left_upper=0.7)``.  Groups not
+    passed keep their original F0.  Each call works on a fresh model; applying a
+    region scale and the legacy ``scale_muscle_f0`` to the same model would
+    compose multiplicatively, so callers should use one mechanism per run.
+    """
+    import mujoco
+
+    groups = muscle_groups(model)
+    info: dict = {}
+    for key, factor in scales.items():
+        if factor == 1.0:
+            continue
+        g = groups[key]
+        idx = np.asarray(g["indices"], dtype=int)
+        original = model.actuator_gainprm[idx, 0].copy()
+        model.actuator_gainprm[idx, 0] *= factor
+        info[key] = {
+            "scale": float(factor),
+            "count": int(len(idx)),
+            "names": list(g["names"]),
+            "indices": [int(i) for i in idx],
+            "f0_original": [float(v) for v in original],
+            "f0_scaled": [float(v) for v in model.actuator_gainprm[idx, 0]],
+        }
+    return {"groups_scaled": info}
+
+
+def scale_muscle_f0(model, left: float = 1.0, right: float = 1.0) -> dict:
+    """Legacy whole-side F0 scaling.
+
+    Scales every actuator whose name ends in ``_l`` / ``_r``.  Because of the
+    asymmetric naming convention (see :func:`muscle_groups`) this touches the
+    **torso + leg** muscles of a side (105 + 40 = 145) and does **not** touch the
+    32 arm muscles of either side (left-arm ``_left`` and right-arm no-suffix).
+
+    ``actuator_gainprm[i, 0]`` is the peak isometric force F0 of the MuJoCo
+    muscle actuator (``gaintype="muscle"``), so scaling it is the standard way to
+    model weakness.  Must be called after ``env_model`` and before the first
+    ``env.reset()`` so every subsequent ``mj_forward`` uses the scaled gains.
+    """
     import mujoco
 
     names = [mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_ACTUATOR, i) for i in range(model.nu)]
@@ -150,6 +254,7 @@ def scale_muscle_f0(model, left: float = 1.0, right: float = 1.0) -> dict:
         "f0_right": right,
         "muscles_scaled_left": counts["left"],
         "muscles_scaled_right": counts["right"],
+        "note": "legacy: scales '_l'/'_r' = torso+leg only; arm muscles ('_left'/no-suffix) untouched",
     }
 
 
