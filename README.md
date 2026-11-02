@@ -25,8 +25,7 @@
   官方 testing 组最长 8.53 s，物理上无法满足 10 s 判据。
 - 之前“官方 checkpoint 回放会倒”在本机可复现，原因是 `musclemimic_models` **1.0.6**：
   3/3 seed 在 2.5–2.8 s 跌倒；固定到 **1.0.5** 后 3/3 正常，单因子回退腿 XML 即可恢复。
-- 详细判定：`reports/decision.md`；10 s 结果：`reports/C_acceptance.md` C8 节；
-  逐 seed 表：`reports/table_10s_long.md`。
+- 详细判定：`reports/decision.md`（中间过程报告已清理，见 git 历史）。
 
 10 s 验收视频（20 fps，叠加真实时间轴与倾角）：
 
@@ -36,8 +35,7 @@
 ## 直线行走训练基线（2026-10-31）
 
 任务：实现并验证"正常人体肌肉驱动的直线行走基线"。结论：**未达到 10 秒直线稳定行走（0/20）**，
-详见 [`reports/decision_straight_walking.md`](./reports/decision_straight_walking.md) 与
-[`reports/E_audit_training.md`](./reports/E_audit_training.md)。
+详见 [`reports/decision_straight_walking.md`](./reports/decision_straight_walking.md)。
 
 | 事实 | 值 |
 |---|---|
@@ -48,7 +46,7 @@
 | 本次训练 | 300 updates / 3.07M steps / 18 分钟 |
 | 10 s 验收（本次策略） | **0/20**，1.24 s 跌倒 |
 | 10 s 验收（官方 mm-10m-2） | **0/20**，19/20 走满 10 s 不跌倒，但侧偏 0.54–2.10 m |
-| 航向误差（已修正） | 平均 **8.6°**（旧报告"86°"是指标错误，见 `reports/F_single_factor_reference.md`） |
+| 航向误差（已修正） | 平均 **8.6°**（旧报告"86°"是指标错误） |
 | 未拼接的真实 ≥10 s 直线参考 | **不可得**。KIT 原始数据（4232 条）**最长直线窗口 7.09 s，无一条 ≥8 s** → 数据门槛未通过（`F`、`G`、`H` 三份审计） |
 
 新增脚本：
@@ -64,9 +62,8 @@ scripts/bench_train_gpu.sh         吞吐/显存基准
 
 ## 三个问题必须分开回答（2026-11-01）
 
-"走满 10 s"、"跟住参考"、"通过冻结验收"是三个不同的问题，答案确实不同。
-详见 [`reports/K_retarget_blocker_and_three_way.md`](./reports/K_retarget_blocker_and_three_way.md)
-与 [`reports/L_seam_bug_and_heading_dependence.md`](./reports/L_seam_bug_and_heading_dependence.md)。
+"走满 10 s"、"跟住参考"、"通过冻结验收"是三个不同的问题，答案确实不同
+（详细过程报告已清理，见 git 历史中的 K/L 报告）。
 
 | 参考 | A 走满 10 s | B 跟随参考 | C 通过冻结验收 | 平均侧偏 |
 |---|---:|---:|---:|---:|
@@ -113,11 +110,12 @@ scripts/check_gmr_toolchain.py / setup_gmr_env.sh   .venv-gmr 工具链安装与
 - 顺带发现一个环境陷阱：`env.reset()` 会把自由关节 XY 归零，所以参考**必须从原点起步**；
   KIT 参考恰好都在原点 3 cm 内，CMU 这条偏 2.8 m。QC 现在会检查。
 - 替代参考 `cmu120_19_straight_h000`（正向、10.41 s、从原点起步）已重定向并 QC 通过，
-  回放 **11/20、9 次跌倒**；与 KIT 参考（20/20、0 摔倒）相比，
-  几何/朝向/起点/checkpoint/协议全部相同，**只有参考速度不同**（0.464 vs 0.884 m/s）。
+  把起点对齐到直线窗后做时长梯度：**6 s → 20/20（侧偏 0.222 m，全部通过）、
+  8 s → 20/20、10 s → 18/20 走满（2 次跌倒，侧偏 0.588 m）**。
 
-> **当前识别出的真正瓶颈是参考步速**，不是数据直线度。详见
-> [`reports/M_smplh_and_cmu_facing.md`](./reports/M_smplh_and_cmu_facing.md) M.8bis。
+> **最终定位：约束是侧偏随时间累积**，不是步速、不是数据集、不是拼接缝。
+> 策略在 0.457 m/s 参考上走出 0.460 m/s（误差 0.7%），速度假设与数据集假设都已被对照实验推翻。
+> 唯一未满足的是冻结的 0.6 m/s 门槛——该参考本身只有 0.457 m/s，代数上无法达到。
 
 ## 环境（已冻结）
 
@@ -311,19 +309,13 @@ scripts/
   dump_reset_state.py    D：记录 reset 后的 qpos/qvel/obs（版本对比用）
 configs/eval_walk.json   冻结的协议、阈值、哈希、指标定义
 reports/
-  A_environment_audit.md
-  B_reproduction.md
-  C_acceptance.md
-  D_model_version_compatibility.md
-  decision.md            ← 通过 / 未通过 / 因数据不足无法判定
-  env_audit.json, motion_stats.json, obs_layout.json, joint_map.json
-  table_walk.md, table_walk_det.md, table_circle.md, table_10s_long.md,
-  table_diag_straight.md         逐 seed 表
+  decision.md            ← 通过 / 未通过 / 因数据不足无法判定（主要报告）
+  decision_straight_walking.md   ← 直线行走基线结论（主要报告）
+  *.json                 各类审计/QC/逐 seed 汇总证据（保留）
   D_model_divergence/            版本对比的 reset 状态与 XML 哈希
   logs/                 过滤后的官方回放/套件/审计日志（证据）
-  video/10s_*_seed0_SUCCESS.mp4, 10s_*_seed10_LATERAL_FAIL.mp4   ← 10 s 验收视频
-  video/walking_medium09_stochastic_seed0.mp4
-runs/                    每次运行的 JSON/CSV/NPZ/日志（npz/mp4/log 不入 git）
+  video/                10 s 验收与最佳回放视频
+（中间过程报告 A–N、table_*.md、three_way*.md 已清理，见 git 历史）
 external/                只读上游源码（不入 git）
 artifacts/               checkpoint 与动作缓存（不入 git）
 ```
@@ -354,9 +346,9 @@ artifacts/               checkpoint 与动作缓存（不入 git）
   本仓库一律以官方 `fullbody/eval.py` 为基线。
 - checkpoint 未记录训练时的 `musclemimic_models` 版本；“1.0.5 是配对版本”依据是 MyoSuite 文档
   + 本仓库的配对回放行为差异。
-- **`SMPLH_NEUTRAL.pkl` 缺失**，因此单条 `CMU/136/136_25_poses` 的 GMR 重定向从未跑通。
-  已验证的只有前置关卡（1.0.5 变体、原始片段 11.64 s 直行）与工具链本身；
-  `fit_gmr_motion()` 之后的 SMPL 前向、500 次 shape fitting、mink IK 全流程**尚未执行过**。
+- **SMPL-H 已到位并完成重定向**：`SMPLH_NEUTRAL.pkl` 由 `scripts/build_smplh_neutral.py` 从官方包合成，
+  `smplx.SMPLH` 前向校验通过（6890 顶点 / 73 关节）；`CMU/136/136_25` 与 `CMU/120/120_19` 均已跑通 GMR。
+  但 `136_25` 是倒退行走（`scripts/amass_facing.py` 判定），不可作正向参考。
 - `qc_retargeted.py` 的足滑指标是**高度阈值代理**（参考轨迹没有接触力），
   5 mm 带下参考自身滑步 0.06–0.11 m/s；宽阈值会混入摆动掠过帧，因此报告敏感性而非单一值。
 - 策略的足滑另由 `eval_walk.py` 用接触法向力 >20 N 判定，与参考的口径不同，不可直接相减。
@@ -365,5 +357,4 @@ artifacts/               checkpoint 与动作缓存（不入 git）
 - **策略是朝向锁定的**：物理上等价的 z 旋转会让侧走角从 −3.3° 变到 −23.1°。
   历史结果中任何在不同世界朝向上跑的组都不可直接与 0° 组比较。
 - `straight_stitched_10s`（lerp 版）**含四元数缺陷**，在该参考上的历史结果
-  （`runs/A_ref_mm10m2`、`runs/TW_stitched`、`reports/three_way.md` 的 `stitched` 列）
-  已被 `_slerp` 版取代，旧文件保留作审计留痕。
+  已被 `_slerp` 版取代；旧文件与历史运行目录见 git 历史。
