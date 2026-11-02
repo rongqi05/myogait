@@ -119,6 +119,40 @@ def env_model(env: Any):
     raise RuntimeError("could not locate MjModel on environment")
 
 
+def scale_muscle_f0(model, left: float = 1.0, right: float = 1.0) -> dict:
+    """Scale the max isometric force (F0) of one or both sides of the body.
+
+    MyoFullBody muscles are named with a ``_l`` / ``_r`` suffix (145 pairs) plus
+    64 midline muscles with no suffix. ``actuator_gainprm[i, 0]`` is the F0 of
+    the MuJoCo muscle actuator (``gaintype="muscle"``), so scaling it is the
+    standard way to model unilateral weakness -- exactly the knob the later
+    hemiparesis experiments will turn.
+
+    Only the two body sides are touched; midline muscles keep their original F0.
+    Must be called after ``env_model`` and before the first ``env.reset()`` so
+    every subsequent ``mj_forward`` uses the scaled gains.
+    """
+    import re
+
+    import mujoco
+
+    names = [mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_ACTUATOR, i) for i in range(model.nu)]
+    counts = {"left": 0, "right": 0}
+    for i, name in enumerate(names):
+        if name.endswith("_l"):
+            model.actuator_gainprm[i, 0] *= left
+            counts["left"] += 1
+        elif name.endswith("_r"):
+            model.actuator_gainprm[i, 0] *= right
+            counts["right"] += 1
+    return {
+        "f0_left": left,
+        "f0_right": right,
+        "muscles_scaled_left": counts["left"],
+        "muscles_scaled_right": counts["right"],
+    }
+
+
 def quat_to_tilt_deg(quat_wxyz: np.ndarray) -> float:
     """Angle between the body's +z axis and world +z, in degrees."""
     w, x, y, z = np.asarray(quat_wxyz, dtype=float)

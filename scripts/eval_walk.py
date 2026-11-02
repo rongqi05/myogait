@@ -32,7 +32,7 @@ import jax.numpy as jnp
 import mujoco
 import numpy as np
 
-from _env_builder import build_eval_bundle, env_data, env_model, quat_to_tilt_deg
+from _env_builder import build_eval_bundle, env_data, env_model, quat_to_tilt_deg, scale_muscle_f0
 
 # ---------------------------------------------------------------------------
 # success thresholds (frozen for this baseline study)
@@ -211,6 +211,8 @@ def rollout(
     horizon: int | None = None,
     perturb: float = 0.0,
     perturb_seed: int = 0,
+    f0_left: float = 1.0,
+    f0_right: float = 1.0,
 ) -> dict:
     deterministic = mode == "deterministic"
     t_build = time.time()
@@ -224,6 +226,7 @@ def rollout(
     )
     env = bundle.env
     model = env_model(env)
+    f0_info = scale_muscle_f0(model, left=f0_left, right=f0_right)
     data = env_data(env)
     policy_fn = make_policy_fn(bundle.agent_conf, deterministic)
     probe = TerminationProbe(env)
@@ -738,6 +741,9 @@ def rollout(
         "ref_start_step": start_subtraj_step,
         "ref_end_step": steps[-1]["ref_step"] if steps else start_subtraj_step,
         "ref_end_phase": float(ref_phase),
+        "f0_left": f0_left,
+        "f0_right": f0_right,
+        "f0_scaling_info": f0_info,
         "wall_time_s": time.time() - t0,
         "build_time_s": t0 - t_build,
         "max_rss_mb": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0,
@@ -832,6 +838,18 @@ def main() -> int:
     ap.add_argument("--perturb", type=float, default=0.0, help="initial joint noise sigma (rad, rad/s)")
     ap.add_argument("--perturb_seed", type=int, default=0)
     ap.add_argument(
+        "--f0_left",
+        type=float,
+        default=1.0,
+        help="scale max isometric force (F0) of all '_l' muscles (hemiparesis knob)",
+    )
+    ap.add_argument(
+        "--f0_right",
+        type=float,
+        default=1.0,
+        help="scale max isometric force (F0) of all '_r' muscles (hemiparesis knob)",
+    )
+    ap.add_argument(
         "--horizon",
         type=int,
         default=None,
@@ -858,6 +876,8 @@ def main() -> int:
             horizon=args.horizon,
             perturb=args.perturb,
             perturb_seed=args.perturb_seed,
+            f0_left=args.f0_left,
+            f0_right=args.f0_right,
         )
         results.append(r)
         print(
