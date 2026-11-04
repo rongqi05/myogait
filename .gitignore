@@ -1,13 +1,19 @@
+# virtual environments / vendored upstream source (never committed)
 .venv/
-external/
-artifacts/
-runs/**/*.npz
-runs/**/*.mp4
-runs/**/*.log
-__pycache__/
-*.pyc
-checkpoints/
-runs/**/checkpoints/
-runs/**/vram.txt
 .venv-train/
 .venv-gmr/
+external/
+artifacts/
+checkpoints/
+
+# Python
+__pycache__/
+*.pyc
+
+# experiment output (raw trajectories, videos, logs, per-seed JSON) -- local evidence only
+runs/
+reports/figures/
+reports/video/
+reports/logs/
+reports/D_model_divergence/
+reports/*.json

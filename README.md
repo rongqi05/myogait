@@ -1,135 +1,46 @@
-# MuscleMimic walking baseline（可审计的 MyoFullBody 10 s 行走基线）
+# MuscleMimic 肌肉驱动行走基线（MyoFullBody + mm-10m-2）
 
-本仓库是一个**独立**的复现/验收工作区，用来回答一个问题：
+独立复现/验收工作区：回答
 
-> 官方 MuscleMimic（MyoFullBody + `amathislab/mm-10m-2`）能否作为正常人连续行走的动力学基线？
+> 官方 MuscleMimic（MyoFullBody + `amathislab/mm-10m-2`）能否作为“正常人肌肉驱动、
+> 根节点自由”的直线行走基线？以及单侧 F0（肌肉最大等长力）缩放如何影响行走？
 
-它不修改 `~/Documents/muscle-rl`、`~/Documents/muscle` 或任何已有 checkpoint。
-上游代码只以只读方式放在 `external/`（不入 git）。
+为毕业设计“降低患侧肌力 → 重新适应 → 比较拐杖辅助侧别”提供可复现的正常行走策略与
+患侧肌力旋钮。**不修改** `muscle-rl` / `muscle` 或任何已有 checkpoint；上游源码只读放在
+`external/`（不入 git）。
 
-## 当前结论（2026-10-29，已完成 10 s 验收）
+## 当前结论（摘要）
 
-> **未通过 10 s 验收：3/20（目标 18/20）。**
-> 20/20 跑满 10.00 s、无跌倒、速度/倾角/根高全达标；**17/20 最大侧偏 >0.35 m**（最大 1.19 m）。
-> 失败模式是**180° 转身时转弯半径偏大，转完后沿参考平行线行走**，不是跌倒或走不动。
-
-| 片段 | 组 | 时长 | 20 seed（stochastic） | v_fwd | 侧偏 mean [min,max] |
-|---|---|---:|---|---:|---|
-| `KIT/3/walk_6m_straight_line06` | **TRAIN** | **14.90 s** | **3/20 通过**（唯一满足 10 s 前置条件的片段） | 0.668 | 0.582 [0.271, 1.192] |
-| `KIT/314/walking_medium09` | TRAIN | 7.72 s | 20/20 通过侧偏等判据（时长/速度不达标） | 0.327 | 0.151 [0.065, 0.275] |
-| `KIT/3/walk_6m_straight_line04` | TRAIN | 7.35 s | 13/20 满足侧偏 | 0.782 | 0.314 [0.172, 0.446] |
-| `KIT/4/WalkInCounterClockwiseCircle04` | TEST | 8.39 s | 14/20 满足侧偏 | 0.514 | 0.295 [0.178, 0.568] |
-| `KIT/314/walking_medium09`（deterministic） | TRAIN | 7.72 s | 0/20（横向漂移 0.61 m） | 0.311 | 0.606 |
-
-- 整个数据集 1190 条动作里**只有 1 条 ≥10 s**，且属于**训练组** → 10 s 结果 **in-sample**。
-  官方 testing 组最长 8.53 s，物理上无法满足 10 s 判据。
-- 之前“官方 checkpoint 回放会倒”在本机可复现，原因是 `musclemimic_models` **1.0.6**：
-  3/3 seed 在 2.5–2.8 s 跌倒；固定到 **1.0.5** 后 3/3 正常，单因子回退腿 XML 即可恢复。
-- 详细判定：`reports/decision.md`（中间过程报告已清理，见 git 历史）。
-
-10 s 验收视频（20 fps，叠加真实时间轴与倾角）：
-
-- `reports/video/10s_walk_6m_straight_line06_seed0_SUCCESS.mp4`（seed 0，侧偏 0.333 m，通过）
-- `reports/video/10s_walk_6m_straight_line06_seed10_LATERAL_FAIL.mp4`（seed 10，侧偏 1.192 m）
-
-## 直线行走训练基线（2026-10-31）
-
-任务：实现并验证"正常人体肌肉驱动的直线行走基线"。结论：**未达到 10 秒直线稳定行走（0/20）**，
-详见 [`reports/decision_straight_walking.md`](./reports/decision_straight_walking.md)。
-
-| 事实 | 值 |
+| 问题 | 结论 |
 |---|---|
-| 本仓库算法 | **MuscleMimic PPOJax**（`conf_fullbody.yaml: algorithm: PPOJax`），不是 Muscle-SuperMimic（全盘无该代码） |
-| 本地 ≥10 s 直线片段 | **不存在**（最长直线窗口 6.84 s） |
-| 数据准备 | `straight_stitched_10s`，13.39 s / 0.874 m/s / 侧向 0.176 m，含 0.2 s 交叉淡入（非动力学一致） |
-| 8 GB GPU 可行档位 | `num_envs=512 × 20 steps`，峰值显存 7043 MiB，≈2.8k env-step/s，RSS 3.9 GB |
-| 本次训练 | 300 updates / 3.07M steps / 18 分钟 |
-| 10 s 验收（本次策略） | **0/20**，1.24 s 跌倒 |
-| 10 s 验收（官方 mm-10m-2） | **0/20**，19/20 走满 10 s 不跌倒，但侧偏 0.54–2.10 m |
-| 航向误差（已修正） | 平均 **8.6°**（旧报告"86°"是指标错误） |
-| 未拼接的真实 ≥10 s 直线参考 | **不可得**。KIT 原始数据（4232 条）**最长直线窗口 7.09 s，无一条 ≥8 s** → 数据门槛未通过（`F`、`G`、`H` 三份审计） |
+| 官方 checkpoint 能否走满 10 s 不跌倒 | **是**。干净参考 `CMU/120/cmu120_19_straight_h000` 上 **18/20** 走满 10 s（0.457 m/s） |
+| 能否通过冻结的直线验收（0.6 m/s、侧偏 ≤0.35 m） | **否**。参考本身 0.457 m/s 达不到 0.6 m/s 门槛；横向漂移另见报告 |
+| 单侧下肢 F0×0.7 | **20/20 早期跌倒**（~3.2 s，向弱侧偏转） |
+| 单侧上肢 F0×0.7 | **14/20** 走满 10 s；可行上肢损伤区间 **\[0.7, 0.9\]** |
 
-新增脚本：
+详细判定与逐种子数据见主要报告：
+
+- [`reports/decision.md`](./reports/decision.md) —— 10 s 行走验收（通过/未通过/数据不足）
+- [`reports/decision_straight_walking.md`](./reports/decision_straight_walking.md) —— 直线行走基线结论
+- [`reports/O_muscle_force_scaling.md`](./reports/O_muscle_force_scaling.md) —— 单侧 F0 缩放实验
+- [`reports/P_f0_upper_lower_ablation.md`](./reports/P_f0_upper_lower_ablation.md) —— 上肢/下肢减力定位
+- [`reports/Q_upper_limb_feasible_range.md`](./reports/Q_upper_limb_feasible_range.md) —— 可行的上肢损伤区间
+
+## 核心文件
 
 ```
-scripts/motion_straightness.py     片段直线性/时长/接触质量审计
-scripts/prepare_straight_walk.py   直线窗口抽取 + 对齐 + 拼接 + 重算派生量
-scripts/train_straight_bounded.sh  8 GB 显存档位的受限训练（含显存监控）
-scripts/acceptance_straight.sh     冻结协议的 20 种子验收
-scripts/check_muscle_chain.py      肌肉力链路证据
-scripts/bench_train_gpu.sh         吞吐/显存基准
-```
-
-## 三个问题必须分开回答（2026-11-01）
-
-"走满 10 s"、"跟住参考"、"通过冻结验收"是三个不同的问题，答案确实不同
-（详细过程报告已清理，见 git 历史中的 K/L 报告）。
-
-| 参考 | A 走满 10 s | B 跟随参考 | C 通过冻结验收 | 平均侧偏 |
-|---|---:|---:|---:|---:|
-| `straight_stitched_10s`（拼接，**含四元数 bug**） | 19/20 | 0/20 | 0/20 | 1.056 m |
-| `straight_stitched_10s_slerp`（拼接，**已修复**） | 20/20 | 1/20 | 0/20 | 0.769 m |
-| `walk_6m_straight_line06`（未拼接，直行仅 6.84 s） | 20/20 | 4/20 | 3/20 | 0.582 m |
-
-### 已定位的两个失效来源
-
-1. **拼接缝的四元数 bug（已修复）**：`prepare_straight_walk.py` 原来对根四元数做线性插值，
-   而两个片段的根四元数在缝处是**对径点**（dot = −0.9926，实际只差 13.9°）。
-   插值模长掉到 0.08，归一化把方向甩过约 180°，形成 **165.8°/帧**的姿态跳变。
-   改为半球对齐 + slerp 后降到 **1.14°/帧**；`qc_retargeted.py` 新增根朝向连续性检查来兜住这类问题。
-   修复后：进度 0.823→0.885（**20/20 种子变好**）、跌倒 1→0、侧偏 1.056→0.769 m，**仍 0/20 达标**。
-2. **策略是朝向锁定的（未解决）**：把参考刚性旋转 0/90/180/270°（物理上严格等价）后，
-   等效侧走角分别为 −3.3° / −22.9° / −4.8° / −23.1°，进度 0.88/0.66/0.92/0.74。
-   观测含世界系根四元数（`q_free_joint`，`FreeJointPosNoXY`），且训练数据朝向集中，
-   所以 ±y 属分布外。**执行器左右不对称已被排除**（145 对 `_l`/`_r` 肌肉 gain 与 ctrlrange 逐位相同）。
-
-> 因此后续所有实验必须**固定参考朝向并记录**，否则左右对比会被朝向效应污染。
-
-```bash
-scripts/retarget_one.py      单条 AMASS → MyoFullBody 重定向（3 道前置关卡，冻结 GMR 参数）
-scripts/qc_retargeted.py     重定向产物 QC（数值/根节点平移+朝向/关节突变/足高/足滑/拼接段）
-scripts/three_way_report.py  A/B/C 三问分开报告 + 逐回合俯视图
-scripts/rotate_reference.py  参考的刚性 z 旋转（校验不变量）
-scripts/rotation_bias_report.py  判定 body-fixed / world-fixed / 朝向依赖
-scripts/check_gmr_toolchain.py / setup_gmr_env.sh   .venv-gmr 工具链安装与 14 项自检
-```
-
-### SMPL-H 与 CMU 重定向（2026-11-01）
-
-官方授权的 SMPL-H / MANO 已到位，`SMPLH_NEUTRAL.pkl` 由
-`scripts/build_smplh_neutral.py` 合成（**不需要 conda/chumpy**），
-`smplx.SMPLH` 前向校验通过（6890 顶点 / 73 关节）。
-
-- `CMU/136/136_25` **重定向成功**且几何完整保留（直行窗 11.6417 → 11.6500 s，
-  速度 0.5067 → 0.5056 m/s，根朝向 0.51°/帧，0 帧穿地）。
-- **但该片段被拒绝**：它是**倒退行走**——踝→趾方向与前进方向点积 **−0.941/−0.920**
-  （KIT 参考为 +0.975/+0.946），原始 AMASS 文件用 SMPL-H FK 也是 −0.941。
-  回放结果 2/20、18 次跌倒、progress −2.13、航向误差 93.6°。
-- 由此补上一道关卡：`scripts/amass_facing.py`（FK 判定，与坐标约定无关）成为
-  `retarget_one.py` 的 **gate 3**，倒退片段直接拒绝。
-- 顺带发现一个环境陷阱：`env.reset()` 会把自由关节 XY 归零，所以参考**必须从原点起步**；
-  KIT 参考恰好都在原点 3 cm 内，CMU 这条偏 2.8 m。QC 现在会检查。
-- 替代参考 `cmu120_19_straight_h000`（正向、10.41 s、从原点起步）已重定向并 QC 通过，
-  把起点对齐到直线窗后做时长梯度：**6 s → 20/20（侧偏 0.222 m，全部通过）、
-  8 s → 20/20、10 s → 18/20 走满（2 次跌倒，侧偏 0.588 m）**。
-
-> **最终定位：约束是侧偏随时间累积**，不是步速、不是数据集、不是拼接缝。
-> 策略在 0.457 m/s 参考上走出 0.460 m/s（误差 0.7%），速度假设与数据集假设都已被对照实验推翻。
-> 唯一未满足的是冻结的 0.6 m/s 门槛——该参考本身只有 0.457 m/s，代数上无法达到。
-
-### 肌肉力 F0 缩放实验（2026-11-02）
-
-结论：**基线（对称肌力）已经基本走直线**（中位侧走角 +0.4°、18/20 走满 10 s）；
-**直接调单侧肌力不能更直**——单侧减力 30% → 10/10 跌倒（3–4 s，向弱侧偏转），
-单侧增力 10–30% → 侧偏不变或更差。详见
-[`reports/O_muscle_force_scaling.md`](./reports/O_muscle_force_scaling.md)。
-
-对论文的意义：F0 旋钮机械上有效且左右镜像对称（可用于“患侧减力”）；
-官方策略对单侧 30% 减力**零鲁棒性**（实际主动力仅降 ~15%），
-直接证明“患侧减力后必须重新适应”这一研究前提。
-
-```bash
-scripts/eval_walk.py --f0_left 0.7 --f0_right 1.0 ...   # 单侧 F0 缩放（患侧肌力旋钮）
+scripts/
+  _env_builder.py          按官方 fullbody/eval.py 的方式构建评估环境（含 F0 缩放核心）
+  eval_walk.py             单 episode、无中途 reset 的验收；--f0_left/--f0_right 与
+                           上肢/下肢分区缩放；逐帧日志 + 可选视频
+  check_f0_groups.py       模型级检查：354 条肌肉按 XML 解剖分组、F0 缩放只命中目标肌肉
+  run_f0_ablation.sh       上肢/下肢 × 单侧 F0 减力定位实验（A–E 五条件）
+  train_straight_bounded.sh  8 GB 显存档位的受限训练（含显存监控）
+  bench_train_gpu.sh         训练吞吐 / 显存基准
+configs/
+  eval_walk.json           冻结的验收协议、阈值、哈希、指标定义（v1.1）
+  constraints.txt          固定 musclemimic_models==1.0.5（1.0.6 会跌倒）
+reports/                   主要 Markdown 报告（原始 JSON/图/视频证据不入 git）
 ```
 
 ## 环境（已冻结）
@@ -137,24 +48,12 @@ scripts/eval_walk.py --f0_left 0.7 --f0_right 1.0 ...   # 单侧 F0 缩放（患
 | 组件 | 版本 |
 |---|---|
 | Python | 3.11.15 |
-| MuscleMimic | `47b653db2bce25de834360d2ee6b2dd88142bd78` |
-| **musclemimic_models** | **1.0.5** (`ba69358c6333692d547836b903f051fe6a8e9cc9`) — 必须固定，1.0.6 会跌倒 |
-| MuJoCo | 3.4.0（CPU） |
+| MuscleMimic（上游源码） | `47b653db2bce25de834360d2ee6b2dd88142bd78` |
+| **musclemimic_models** | **1.0.5**（`ba69358c…`）——必须固定，1.0.6 左膝约束符号翻转致跌倒 |
+| MuJoCo | 3.4.0（CPU 验收） |
 | numpy / jax / flax | 2.2.6 / 0.7.2 / 0.12.0 |
-| 后端 | 纯 MuJoCo CPU（验收）；warp/CUDA 仅用于训练（`.venv-train`） |
-| checkpoint | `amathislab/mm-10m-2`, update 12500, digest `c8c7a964…` |
-
-三个环境，职责固定互不污染（`.gitignore` 已忽略后两个）：
-
-| 环境 | 用途 | jax | torch |
-|---|---|---|---|
-| `.venv` | **冻结的验收环境**（`eval_walk.py`、A/B/C 三问报告） | CPU | 无 |
-| `.venv-train` | PPO + warp 训练 | CUDA12 | 无 |
-| `.venv-gmr` | GMR-Fit 重定向（纯 IK，不占显存） | CPU | **CPU-only** |
-
-`.venv-gmr` 由 `bash scripts/setup_gmr_env.sh` 重建；它会强制把 `musclemimic_models`
-回退到 1.0.5，并用 `scripts/check_gmr_toolchain.py` 校验膝约束符号模式。
-GPU：RTX 5060 Laptop 8 GB（sm_120），驱动已加载，EGL 离屏渲染可用。
+| checkpoint | `amathislab/mm-10m-2`，update 12500，digest `c8c7a964…` |
+| GPU | RTX 5060 Laptop 8 GB（仅训练用） |
 
 ### 安装
 
@@ -169,14 +68,10 @@ git clone https://github.com/amathislab/musclemimic_models.git
 git -C musclemimic_models checkout v1.0.5
 cd ..
 
-# 2) 虚拟环境（需要 Python 3.11.x；uv 会自动取 standalone 构建）
+# 2) 虚拟环境
 uv venv .venv --python 3.11
 
-#    注意：本仓库当前使用的 .venv 是**自包含**的（python 二进制 + stdlib + .so
-#    都复制进 .venv），不依赖任何 conda 环境，因此 `pyvenv.cfg` 已改名为
-#    `pyvenv.cfg.hemi_msk_orig`。见 reports/env_snapshots/ 与下方“环境维护”。
-
-# 3) 依赖（PyPI 直连不稳定，用清华镜像 + PyPI 兜底；distrax 依赖只在 PyPI 上的 tfp-nightly）
+# 3) 依赖
 uv pip install --python .venv/bin/python \
   --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
   --extra-index-url https://pypi.org/simple \
@@ -187,189 +82,91 @@ uv pip install --python .venv/bin/python \
   "glfw>=2.9.0" "seaborn>=0.13.2" metrx "wandb>=0.19.10" "viser>=1.0.10" \
   "trimesh>=4.0.0" "Pillow>=10.0.0"
 
-# 4) 模型包，严格 1.0.5（--no-deps 避免把 mujoco 升级）
+# 4) 模型包，严格 1.0.5（--no-deps 避免升级 mujoco）
 uv pip install --python .venv/bin/python --no-deps ./external/musclemimic_models
-.venv/bin/python -c "import musclemimic_models; print(musclemimic_models.__file__)"
 ```
 
-> 不要用 `uv sync`：`external/MuscleMimic/pyproject.toml` 写的是 `musclemimic_models>=1.0.2`，
-> 今天会解析到 1.0.6，直接复现跌倒。
-
-### 网络
-
-本机直连 `huggingface.co` 会超时，所有 HF 下载都要走镜像：
-
-```bash
-export HF_ENDPOINT=https://hf-mirror.com
-```
+> 不要用 `uv sync`：上游 `pyproject.toml` 写的是 `musclemimic_models>=1.0.2`，会解析到 1.0.6。
 
 ## 数据与 checkpoint
 
 ```bash
-mkdir -p artifacts/checkpoints artifacts/motions
+export HF_ENDPOINT=https://hf-mirror.com   # 本机直连 huggingface.co 超时
 
-# checkpoint（公开，无需 gate）
+mkdir -p artifacts/checkpoints
 HF_ENDPOINT=https://hf-mirror.com .venv/bin/python - <<'PY'
 from huggingface_hub import snapshot_download
 snapshot_download("amathislab/mm-10m-2", local_dir="artifacts/checkpoints/mm-10m-2")
 PY
-
-# 官方 loader 需要一个 checkpoint_<step> 目录名；用绝对路径符号链接
+# 官方 loader 需要 checkpoint_<step> 目录名；官方会自己建相对符号链接（会变坏链），
+# 用绝对路径符号链接代替：
 ln -sfn "$PWD/artifacts/checkpoints/mm-10m-2" artifacts/checkpoints/checkpoint_12500
 ```
 
-> 官方 `_canonicalize_resume_path()` 会自己建一个**相对**符号链接，在 `artifacts/checkpoints/` 下
-> 解析会变成坏链。上面这步是必要的（未改上游代码）。
-
-Demo 动作（3 条，gated-auto，需要 token 已同意 demo 条款）：
-
-```bash
-HF_ENDPOINT=https://hf-mirror.com .venv/bin/python -c \
-  "from huggingface_hub import hf_hub_download as d; \
-   [d('amathislab/demo_dataset', f'MyoFullBody/gmr/{p}.npz', repo_type='dataset', \
-      local_dir='artifacts/motions/demo') for p in [ \
-      'KIT/314/walking_medium09_poses','KIT/348/turn_right03_poses', \
-      'KIT/4/WalkInCounterClockwiseCircle04_poses']]"
-mkdir -p ~/.musclemimic/caches/AMASS/MyoFullBody/gmr
-cp -r artifacts/motions/demo/MyoFullBody/gmr/* ~/.musclemimic/caches/AMASS/MyoFullBody/gmr/
-```
-
-完整重定向数据集 `amathislab/musclemimic-retargeted` 需要网页接受 AMASS 条款（403 否则），
-其中才有 ≥10 s 的 walking 片段。见 `reports/decision.md`。
-
-已验证的哈希：
-
-| 对象 | sha256 |
-|---|---|
-| `mm-10m-2` 目录 digest（16 文件） | `c8c7a964b88b7163bc9989785063cbb751dae88cd4358eaced25bf3475a73b2a` |
-| `walking_medium09_poses.npz` | `8f320295504ffc0a7759ba76ee454dd2b1e3f1feb7244d476b2373100235cc9b` |
-| `WalkInCounterClockwiseCircle04_poses.npz` | `8e249a712f95a7d2cfcc3653db2012892b948bbcc94da21d2348078cce904ddf` |
-| `turn_right03_poses.npz` | `99255a4e15866ce81b3a5fe6d7b9a5de9138905697170241bebccdb1bb84399d` |
+参考运动（重定向后的 MyoFullBody `.npz`）放在
+`~/.musclemimic/caches/AMASS/MyoFullBody/gmr/`；本仓库实验固定使用
+`CMU/120/cmu120_19_straight_h000`（未拼接、正向、10.41 s 直线窗、0.457 m/s）。
 
 ## 复现命令
 
-全部命令在仓库根目录执行，并设置 `PYTHONPATH=external/MuscleMimic:scripts`。
+所有命令在仓库根目录执行，并 `export PYTHONPATH=external/MuscleMimic:scripts`。
 
 ```bash
 export HF_ENDPOINT=https://hf-mirror.com
 export PYTHONPATH=external/MuscleMimic:scripts
 
-# A) 环境/模型/接口审计 → reports/env_audit.json
-.venv/bin/python scripts/env_audit.py
-
-# A) 参考片段时长与速度上限 → reports/motion_stats.json
-.venv/bin/python scripts/motion_stats.py
-
-# B) 官方入口原样回放（注意：n_steps 是跨 episode 总预算，会自动 reset）
-.venv/bin/python external/MuscleMimic/fullbody/eval.py \
-  --path artifacts/checkpoints/checkpoint_12500 \
-  --motion_path KIT/314/walking_medium09_poses \
-  --use_mujoco --no_render --stochastic --n_steps 1000 \
-  --export_trajectory --trajectory_dir runs/B_official/stochastic
-
-# C) 单回合验收（先 3 seed）
+# 单回合验收（3 seed 冒烟）
 .venv/bin/python scripts/eval_walk.py \
   --checkpoint artifacts/checkpoints/checkpoint_12500 \
-  --motion_path KIT/314/walking_medium09_poses \
-  --mode stochastic --seeds 0 1 2 --out_dir runs/C_pilot
+  --motion_path CMU/120/cmu120_19_straight_h000 --start_step 53 \
+  --mode stochastic --seeds 0 1 2 --out_dir runs/pilot
 
-# C) 20 seed 验收 + 视频
+# 20 seed 验收（可加 --video 导出 mp4）
 .venv/bin/python scripts/eval_walk.py \
-  --checkpoint artifacts/checkpoints/checkpoint_12500 \
-  --motion_path KIT/314/walking_medium09_poses \
-  --mode stochastic --seeds $(seq 0 19) --out_dir runs/C_acceptance
+  --motion_path CMU/120/cmu120_19_straight_h000 --start_step 53 --seconds 10 \
+  --mode stochastic --seeds $(seq 0 19) --out_dir runs/acceptance
 
-MUJOCO_GL=egl .venv/bin/python scripts/eval_walk.py \
-  --mode stochastic --seeds 0 --video --video_every 5 \
-  --out_dir runs/C_acceptance_video
+# 单侧 F0 缩放（患侧肌力旋钮）
+.venv/bin/python scripts/eval_walk.py \
+  --motion_path CMU/120/cmu120_19_straight_h000 --start_step 53 --seconds 10 \
+  --mode stochastic --seeds $(seq 0 19) \
+  --f0_left_lower 0.7 --out_dir runs/left_lower_070
 
-# 10 s 验收（已取得数据集访问）：下载 14.9 s 片段 → 前置校验 → 20 seed 验收 → 视频
-bash scripts/after_access_10s.sh
-MUJOCO_GL=egl .venv/bin/python scripts/eval_walk.py \
-  --motion_path KIT/3/walk_6m_straight_line06_poses \
-  --mode stochastic --seeds 0 10 --video --video_every 5 --out_dir runs/C_video_10s
+# 上肢/下肢减力定位（A–E 五条件 × 20 种子）
+bash scripts/run_f0_ablation.sh
 
-# D) 版本配对回放（1.0.6 / 1.0.6+1.0.5 腿）
-git -C external/musclemimic_models archive v1.0.6 | tar -x -C /tmp/mm_models_106
-PYTHONPATH=/tmp/mm_models_106:external/MuscleMimic:scripts \
-  .venv/bin/python scripts/eval_walk.py --mode stochastic --seeds 0 1 2 \
-  --out_dir runs/D_model_version/106
-PYTHONPATH=/tmp/mm_models_106:external/MuscleMimic:scripts \
-  .venv/bin/python scripts/dump_reset_state.py --tag 106 \
-  --out reports/D_model_divergence/reset_106.json
+# 8 GB 显存下的受限训练 / 基准
+NENV=512 STEPS=20 MINUTES=25 bash scripts/train_straight_bounded.sh
+NENV=256 UPDATES=4 bash scripts/bench_train_gpu.sh
 ```
 
-## 目录
+### F0 缩放语义（重要）
 
-```
-scripts/
-  _env_builder.py        按官方 eval.py 的方式构建环境（不修改上游）
-  env_audit.py           A：模型/接口/checkpoint/motion 审计
-  motion_stats.py        参考片段的时长、速度、连续行走段
-  eval_walk.py           C：单 episode、无中途 reset 的验收 + 逐帧日志 + 视频
-  make_table.py          从 run 目录生成逐 seed markdown 表
-  retarget_one.py        单条 AMASS → MyoFullBody（GMR-Fit），3 道前置关卡
-  qc_retargeted.py       重定向产物 QC：数值/根节点平移+朝向/关节突变/足高/足滑/拼接段
-  three_way_report.py    A 走满 / B 跟随参考 / C 通过验收，逐回合报告 + 俯视图
-  rotate_reference.py    参考的刚性 z 旋转（校验平移不变性 + rot000 逐位复现）
-  rotation_bias_report.py  body-fixed / world-fixed / 朝向依赖 判定
-  build_smplh_neutral.py  由官方 SMPL-H + MANO 合成 SMPLH_NEUTRAL.pkl（无需 conda/chumpy）
-  amass_facing.py         正向/倒退行走判定（SMPL-H FK，与坐标约定无关）
-  slice_amass_clip.py     连续帧切片（无插值/无混合）
-  check_gmr_toolchain.py .venv-gmr 的 14 项自检（含 1.0.5 膝约束符号模式）
-  setup_gmr_env.sh       重建 .venv-gmr 并回退 musclemimic_models 到 1.0.5
-  amass_kit_audit.py     流式审计 AMASS .tar.bz2（不解压）：时长/直行窗/速度
-  after_access_10s.sh    取得 gated 数据后的一键 10 s 验收（含前置校验）
-  run_suite.sh           本次全部 6 组、67 个 rollout 的顺序复现
-  dump_reset_state.py    D：记录 reset 后的 qpos/qvel/obs（版本对比用）
-configs/eval_walk.json   冻结的协议、阈值、哈希、指标定义
-reports/
-  decision.md            ← 通过 / 未通过 / 因数据不足无法判定（主要报告）
-  decision_straight_walking.md   ← 直线行走基线结论（主要报告）
-  *.json                 各类审计/QC/逐 seed 汇总证据（保留）
-  D_model_divergence/            版本对比的 reset 状态与 XML 哈希
-  logs/                 过滤后的官方回放/套件/审计日志（证据）
-  video/                10 s 验收与最佳回放视频
-（中间过程报告 A–N、table_*.md、three_way*.md 已清理，见 git 历史）
-external/                只读上游源码（不入 git）
-artifacts/               checkpoint 与动作缓存（不入 git）
-```
+- 模型 354 条肌肉 = 左上肢 32 + 右上肢 32 + 左下肢 40 + 右下肢 40 + 左躯干 105 + 右躯干 105。
+- 命名约定不对称：**腿/躯干**用 `_l`/`_r`，**手臂**左臂用 `_left`、右臂无后缀。
+- `--f0_left/--f0_right`（旧语义）：缩放全部 `_l`/`_r` = **躯干+腿**（145 条），**不含手臂**。
+- `--f0_left_upper/--f0_left_lower/--f0_right_upper/--f0_right_lower`：只缩放对应解剖分组。
+- F0 只缩放主动力（Hill 模型），被动张力不缩放；主动力变化是**亚比例**的
+  （F0×0.7 → 行走中下肢主动力约 ×0.94、上肢约 ×0.87）。
 
-## 资源
+## 冻结验收协议（configs/eval_walk.json, v1.1）
 
-- 单进程顺序评估，峰值 RSS 2.5–4.6 GB（实测 30 GiB / 0 swap 下两组 × 20 种子无压力）；无并行训练。
-- 每 seed 约 15–21 s（含环境构建），20 seed 约 5 分钟；两组顺序跑约 10 分钟。
-- 视频渲染用 `MUJOCO_GL=egl`（GPU 可用时为硬件 EGL）。
-- `.venv` 1.8 GB · `.venv-train` 6.6 GB · `.venv-gmr` 2.5 GB。
+| 阈值 | 值 |
+|---|---|
+| 最短时长 | 10.0 s（`data.time - reset_time`，单次 reset） |
+| 平均前进速度 | ≥ 0.6 m/s |
+| 最大侧偏 | ≤ 0.35 m |
+| 骨盆/躯干倾角 | ≤ 45° |
+| 跌倒 | 根高 < 0.6 m 或倾角 > 60° |
 
-## 环境维护（2026-10-31）
-
-- `.venv` 已改为**自包含**：python 二进制、stdlib、依赖的 `.so` 都复制进 `.venv`，
-  `pyvenv.cfg` 改名为 `pyvenv.cfg.hemi_msk_orig`（原件备份）。`sys.base_prefix == sys.prefix`。
-  改动后已用 seed 0 回放验证与清理前的结果 **逐位一致**。
-- 已删除 conda 环境 `hemi_msk`（旧 mojoco，可编辑安装已失效）与 `hemirl`（muscle-rl）。
-  依赖快照保存在 `reports/env_snapshots/`。
-- 清理了 pip / uv / conda 缓存。磁盘可用空间 85 G → 101 G。
-- 已删除 conda 环境 `env_isaaclab`（Isaac Lab，11 G）。依赖快照见
-  `reports/env_snapshots/env_isaaclab_freeze_20261031.txt`。
-- **现在除了 conda `base` 没有其它 conda 环境**，`.venv` 是唯一可用的 Python 环境；
-  重建 Isaac Lab 见 `reports/env_snapshots/README.md`。
+结束原因：`time_limit_success` / `physical_fall` / `reference_deviation` /
+`clip_end` / `numeric_anomaly` / `reset_or_state_override` / `other`。
 
 ## 已知限制
 
-- 未使用 MyoSuite 的 MuscleMimic 集成路径，未核实其“缺少策略文件时回退到参考轨迹回放”的分支；
-  本仓库一律以官方 `fullbody/eval.py` 为基线。
+- 未使用 MyoSuite 的 MuscleMimic 集成路径；一律以官方 `fullbody/eval.py` 为基线，未核实其
+  “缺少策略文件时回退参考轨迹回放”的分支。
 - checkpoint 未记录训练时的 `musclemimic_models` 版本；“1.0.5 是配对版本”依据是 MyoSuite 文档
-  + 本仓库的配对回放行为差异。
-- **SMPL-H 已到位并完成重定向**：`SMPLH_NEUTRAL.pkl` 由 `scripts/build_smplh_neutral.py` 从官方包合成，
-  `smplx.SMPLH` 前向校验通过（6890 顶点 / 73 关节）；`CMU/136/136_25` 与 `CMU/120/120_19` 均已跑通 GMR。
-  但 `136_25` 是倒退行走（`scripts/amass_facing.py` 判定），不可作正向参考。
-- `qc_retargeted.py` 的足滑指标是**高度阈值代理**（参考轨迹没有接触力），
-  5 mm 带下参考自身滑步 0.06–0.11 m/s；宽阈值会混入摆动掠过帧，因此报告敏感性而非单一值。
-- 策略的足滑另由 `eval_walk.py` 用接触法向力 >20 N 判定，与参考的口径不同，不可直接相减。
-- 未拼接参考的改善**不能**归因于“去掉拼接”：两条参考的速度（0.883 vs 0.834 m/s）
-  与几何（后者 10 s 窗口内直行仅 3.66–10.00 s）都不同。
-- **策略是朝向锁定的**：物理上等价的 z 旋转会让侧走角从 −3.3° 变到 −23.1°。
-  历史结果中任何在不同世界朝向上跑的组都不可直接与 0° 组比较。
-- `straight_stitched_10s`（lerp 版）**含四元数缺陷**，在该参考上的历史结果
-  已被 `_slerp` 版取代；旧文件与历史运行目录见 git 历史。
+  与本仓库的配对回放行为差异。
+- 策略**朝向锁定**：物理上等价的 z 旋转会改变侧走角，不同世界朝向的组不可直接比较。
+- F0 缩放比例 ≠ 临床肌力等级；跌倒回合是“冻结正常策略对损伤的反应”，不是稳定偏瘫步态。

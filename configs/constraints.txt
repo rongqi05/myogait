@@ -1,4 +1,4 @@
 # Pin environment-model package to the variant used by the frozen acceptance env.
 # musclemimic_models 1.0.6 flips the sign of both left-knee equality-constraint
-# polycoef coefficients; see reports/D_model_version_compatibility.md.
+# polycoef coefficients and makes the official policy fall over; 1.0.5 is correct.
 musclemimic_models==1.0.5
