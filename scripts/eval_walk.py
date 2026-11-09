@@ -646,7 +646,7 @@ def rollout(
     )
 
     criteria = {
-        "duration_ge_10s": bool(duration >= seconds - 1e-9),
+        "duration_ge_target": bool(duration >= seconds - 1e-9),
         "no_physical_fall": not (height_min < FALL_HEIGHT or max(tilt_max_pelvis, tilt_max_torso) > FALL_TILT_DEG),
         "no_numeric_anomaly": not numeric_anomaly,
         "no_reset_or_state_override": not reset_override,
@@ -716,6 +716,7 @@ def rollout(
         "reset_count": reset_count,
         "n_control_steps": len(steps),
         "duration_s": duration,
+        "target_seconds": seconds,
         "reset_time": reset_time,
         "reason": reason,
         "end_condition": end_condition,
@@ -859,6 +860,13 @@ def main() -> int:
     ap.add_argument("--motion_path", default="KIT/314/walking_medium09_poses")
     ap.add_argument("--mode", choices=("stochastic", "deterministic"), default="stochastic")
     ap.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    ap.add_argument(
+        "--protocol",
+        choices=("10s", "20s"),
+        default=None,
+        help="Unified evaluation protocol: sets --seconds and --horizon together "
+        "(10s -> 10 s / 1000 steps; 20s -> 20 s / 2000 steps). Explicit --seconds/--horizon win.",
+    )
     ap.add_argument("--seconds", type=float, default=SUCCESS_SECONDS)
     ap.add_argument("--start_step", type=int, default=0)
     ap.add_argument("--out_dir", default="runs/C_acceptance")
@@ -910,6 +918,20 @@ def main() -> int:
         help="Override env horizon (control steps). Default uses the checkpoint value (1000 = 10 s).",
     )
     args = ap.parse_args()
+
+    # Unified 10s/20s protocol: a named protocol fixes both the success window
+    # and the env horizon. Explicit flags still override it, so the legacy
+    # "--seconds 10 --horizon 1000" invocation keeps its old meaning.
+    if args.protocol == "10s":
+        if args.seconds == SUCCESS_SECONDS:
+            args.seconds = 10.0
+        if args.horizon is None:
+            args.horizon = 1000
+    elif args.protocol == "20s":
+        if args.seconds == SUCCESS_SECONDS:
+            args.seconds = 20.0
+        if args.horizon is None:
+            args.horizon = 2000
 
     out_dir = Path(args.out_dir) / args.mode
     out_dir.mkdir(parents=True, exist_ok=True)
