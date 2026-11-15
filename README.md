@@ -25,6 +25,7 @@
 - [`reports/O_muscle_force_scaling.md`](./reports/O_muscle_force_scaling.md) —— 单侧 F0 缩放实验
 - [`reports/P_f0_upper_lower_ablation.md`](./reports/P_f0_upper_lower_ablation.md) —— 上肢/下肢减力定位
 - [`reports/Q_upper_limb_feasible_range.md`](./reports/Q_upper_limb_feasible_range.md) —— 可行的上肢损伤区间
+- [`reports/R_continuous_gait_baseline.md`](./reports/R_continuous_gait_baseline.md) —— 连续步态基线（>20 s 参考、统一 10 s/20 s 协议、多种子验收）
 
 ## 核心文件
 

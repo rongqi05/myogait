@@ -2,6 +2,12 @@
 
 日期：2026-11-09 ｜ 前置：[decision_straight_walking.md](./decision_straight_walking.md)、[O_muscle_force_scaling.md](./O_muscle_force_scaling.md)
 
+> 注：本报告引用的数据准备脚本（`retarget_one.py`、`amass_facing.py`、`amass_kit_audit.py`、
+> `prepare_straight_walk.py`、`qc_retargeted.py`、`rotate_reference.py`、`slice_amass_clip.py`、
+> `motion_straightness.py`、`render_npz_video.py`）在后续清理中已从工作区移除，
+> 完整实现保留在 git 历史（commit `bc8a8fe`，路径 `scripts/`）。本次评估的核心代码
+> （`eval_walk.py` / `_env_builder.py` / 训练脚本）保留在仓库中。
+
 ## 摘要（结论先行）
 
 | 问题 | 结论 |
