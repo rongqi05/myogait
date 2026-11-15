@@ -19,7 +19,6 @@
 - [R：连续步态基线](reports/R_continuous_gait_baseline.md)；[逐种子表](reports/R_v2_per_seed.csv)
 - [P：上肢、下肢分区减力](reports/P_f0_upper_lower_ablation.md)；[Q：上肢强度扫描](reports/Q_upper_limb_feasible_range.md)
 - [O：单侧肌力缩放](reports/O_muscle_force_scaling.md)；[验收口径](configs/eval_walk.json)
-- [开题研究逻辑图](docs/proposal_logic.md)
 
 ## 代码和数据
 
