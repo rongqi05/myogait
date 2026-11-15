@@ -44,6 +44,7 @@ import mujoco  # noqa: E402
 import matplotlib  # noqa: E402
 
 matplotlib.use("Agg")
+import matplotlib.colors as mcolors  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import imageio.v2 as imageio  # noqa: E402
 
@@ -60,6 +61,11 @@ GROUP_LABELS = {
     "right_trunk": "R trunk",
 }
 GRID_COLS = 15  # muscles per row in the activation grid
+
+# Orange -> red gradient: low activation = orange, high activation = deep red.
+ACT_CMAP = mcolors.LinearSegmentedColormap.from_list(
+    "activation_orange_red", ["#ffb84d", "#ff8c00", "#ff4500", "#c01c28"]
+)
 
 
 def _even(frame: np.ndarray) -> np.ndarray:
@@ -109,8 +115,8 @@ def build_grid_frame(act, order, bounds, t):
     nrows, ncols = grid.shape
 
     fig, ax = plt.subplots(figsize=(max(6.0, ncols * 0.55), max(3.0, nrows * 0.32)), dpi=110)
-    cmap = plt.get_cmap("inferno").copy()
-    cmap.set_bad("0.85")  # empty cells: light grey
+    cmap = ACT_CMAP.copy()
+    cmap.set_bad("0.88")  # empty cells: light grey
     im = ax.imshow(grid, aspect="equal", cmap=cmap, vmin=0.0, vmax=1.0, interpolation="nearest")
     # group separators + labels
     yticks, yticklabels = [], []
@@ -192,6 +198,8 @@ def main() -> int:
     ap.add_argument("--mode", choices=("stochastic", "deterministic"), default="stochastic")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--seconds", type=float, default=10.0)
+    ap.add_argument("--horizon", type=int, default=None,
+                    help="override env horizon in control steps (checkpoint default 1000 = 10 s; use 2000 for 20 s)")
     ap.add_argument("--start_step", type=int, default=0)
     ap.add_argument("--video_every", type=int, default=5, help="render every Nth control step")
     ap.add_argument("--style", choices=("grid", "side"), default="grid",
@@ -208,7 +216,7 @@ def main() -> int:
         start_step=args.start_step,
         traj_index=0,
         strict_termination=False,
-        horizon=None,
+        horizon=args.horizon,
     )
     model = env_model(bundle.env)
     data = env_data(bundle.env)
