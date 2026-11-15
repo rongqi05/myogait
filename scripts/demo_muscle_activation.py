@@ -1,26 +1,27 @@
 #!/usr/bin/env python3
-"""Render a walking demo with a live muscle-activation panel.
+"""Render a walking demo and a separate grid-style muscle-activation video.
 
 Steps the frozen policy through a single episode (no reset, same loop as
-``eval_walk.py``) and, every few control steps, draws a frame composed of:
+``eval_walk.py``) and writes, as *separate* time-synchronised mp4 files:
 
-  * left  : the MyoFullBody scene (MuJoCo tracking camera);
-  * right : a per-muscle activation heatmap (all 354 Hill muscles, grouped by
-            anatomical region) plus the per-group mean activation bars.
+  * the walking video (MyoFullBody scene only);
+  * a grid-style muscle-activation heatmap: all 354 Hill muscles arranged as
+    coloured tiles in a fixed grid, grouped by anatomical region. Each tile is
+    one muscle, coloured by its activation (0 slack -> 1 fully active).
 
-Colour scale: activation 0 (slack) -> 1 (fully active), ``inferno`` colormap.
-The output is a time-synchronised mp4, so the heatmap moves in real time with
-the gait.
+Both outputs are produced from the *same* rollout, so they stay in sync when
+played side by side.
 
 Usage:
 
     export PYTHONPATH=external/MuscleMimic:scripts MUJOCO_GL=egl
     .venv/bin/python scripts/demo_muscle_activation.py \
         --motion_path KIT/314/walking_medium09_poses --seconds 10 --seed 0 \
-        --out reports/video/demo_activation.mp4
+        --out reports/video/demo_walk.mp4 \
+        --out_activation reports/video/demo_activation_grid.mp4
 
-Pass ``--npz runs/.../stochastic_seed0.npz`` to replay an already-saved rollout
-instead of running the policy (the recorded ``act`` array is visualised).
+``--style side`` additionally writes a single combined frame (body + panel).
+``--npz`` replays an already-saved rollout instead of stepping the policy.
 """
 
 from __future__ import annotations
@@ -58,68 +59,82 @@ GROUP_LABELS = {
     "left_trunk": "L trunk",
     "right_trunk": "R trunk",
 }
-SIDE_COLORS = {"L": "#4c72b0", "R": "#c44e52"}
+GRID_COLS = 15  # muscles per row in the activation grid
 
 
-def build_panel(renderer, data, cam, groups, order, bounds, group_means, t):
-    """Compose one frame: body image + activation heatmap + group bars."""
-    renderer.update_scene(data, camera=cam)
-    body = renderer.render()  # (H, W, 3) uint8
+def _even(frame: np.ndarray) -> np.ndarray:
+    """Crop to even width/height (h264 yuv420p requires even dimensions)."""
+    h, w = frame.shape[:2]
+    return frame[: h // 2 * 2, : w // 2 * 2]
 
-    act = np.asarray(data.act, dtype=float)[order]  # (354,)
 
-    fig = plt.figure(figsize=(13.2, 5.2), dpi=100)
-    gs = fig.add_gridspec(
-        2, 2, width_ratios=[1.35, 0.55], height_ratios=[1.0, 2.2],
-        left=0.015, right=0.985, top=0.96, bottom=0.05, wspace=0.10, hspace=0.28,
-    )
-    ax_img = fig.add_subplot(gs[:, 0])
-    ax_img.imshow(body, interpolation="bilinear")
-    ax_img.axis("off")
-    ax_img.set_title(f"t = {t:5.2f} s", fontsize=11, pad=4)
-
-    # ---- per-group mean activation (top right) ---------------------------
-    ax_bars = fig.add_subplot(gs[0, 1])
-    labels = []
-    colors = []
-    for g in GROUP_ORDER:
-        side = GROUP_LABELS[g][0]
-        labels.append(GROUP_LABELS[g])
-        colors.append(SIDE_COLORS[side])
-    y = np.arange(len(GROUP_ORDER))[::-1]
-    ax_bars.barh(y, group_means, color=colors, height=0.65)
-    ax_bars.set_yticks(y, labels, fontsize=8)
-    ax_bars.set_xlim(0, 1)
-    ax_bars.set_xlabel("mean activation", fontsize=8)
-    ax_bars.tick_params(axis="x", labelsize=8)
-    ax_bars.set_title("group mean activation", fontsize=9, pad=4)
-    for yi, v in zip(y, group_means):
-        ax_bars.text(min(v + 0.03, 0.97), yi, f"{v:.2f}", va="center", fontsize=7)
-
-    # ---- per-muscle heatmap (bottom right) --------------------------------
-    ax_hm = fig.add_subplot(gs[1, 1])
-    col = act[:, None]  # (354, 1)
-    im = ax_hm.imshow(col, aspect="auto", cmap="inferno", vmin=0.0, vmax=1.0, interpolation="nearest")
-    ax_hm.set_yticks([], [])
-    ax_hm.set_xticks([], [])
-    # group separators + labels
-    b = 0
+def make_grid_layout(order, bounds, cols=GRID_COLS):
+    """Build a fixed grid layout for the 354 muscles (NaN = empty cell)."""
+    rows, labels = [], []
+    offset = 0
     for g in GROUP_ORDER:
         n = bounds[g]
-        ax_hm.axhline(b + n, color="white", lw=0.6, alpha=0.6)
-        ax_hm.text(-0.35, b + n / 2, GROUP_LABELS[g], va="center", ha="right", fontsize=7,
-                   transform=ax_hm.get_yaxis_transform())
-        b += n
-    ax_hm.set_ylim(354, 0)
-    ax_hm.set_title("muscle activation (354 muscles)", fontsize=9, pad=4)
-    cbar = fig.colorbar(im, ax=ax_hm, fraction=0.06, pad=0.08)
-    cbar.set_label("activation", fontsize=8)
-    cbar.ax.tick_params(labelsize=7)
+        nrows = max(1, int(np.ceil(n / cols)))
+        block = np.full((nrows, cols), np.nan)
+        labels.append((offset + (nrows - 1) / 2.0, GROUP_LABELS[g], n))
+        offset += nrows
+        rows.append(block)
+        if g != GROUP_ORDER[-1]:
+            rows.append(np.full((1, cols), np.nan))  # separator row
+            offset += 1
+    return np.vstack(rows), labels
+
+
+def fill_grid(layout, order, bounds, act, cols=GRID_COLS):
+    """Copy per-muscle activation into the fixed grid layout."""
+    grid = layout.copy()
+    src = 0
+    for gi, g in enumerate(GROUP_ORDER):
+        n = bounds[g]
+        nrows = max(1, int(np.ceil(n / cols)))
+        top = 0
+        for gg in GROUP_ORDER[:gi]:
+            top += max(1, int(np.ceil(bounds[gg] / cols))) + (1 if gg != GROUP_ORDER[-1] else 0)
+        block = np.full((nrows, cols), np.nan)
+        block.flat[:n] = act[src : src + n]
+        grid[top : top + nrows, :] = block
+        src += n
+    return grid
+
+
+def build_grid_frame(act, order, bounds, t):
+    """One standalone grid-heatmap frame (no body)."""
+    layout, _ = make_grid_layout(order, bounds)
+    grid = fill_grid(layout, order, bounds, act)
+    nrows, ncols = grid.shape
+
+    fig, ax = plt.subplots(figsize=(max(6.0, ncols * 0.55), max(3.0, nrows * 0.32)), dpi=110)
+    cmap = plt.get_cmap("inferno").copy()
+    cmap.set_bad("0.85")  # empty cells: light grey
+    im = ax.imshow(grid, aspect="equal", cmap=cmap, vmin=0.0, vmax=1.0, interpolation="nearest")
+    # group separators + labels
+    yticks, yticklabels = [], []
+    offset = 0
+    for g in GROUP_ORDER:
+        n = bounds[g]
+        nrows_g = max(1, int(np.ceil(n / GRID_COLS)))
+        yticks.append(offset + (nrows_g - 1) / 2.0)
+        yticklabels.append(GROUP_LABELS[g])
+        offset += nrows_g
+        if g != GROUP_ORDER[-1]:
+            ax.axhline(offset - 0.5, color="white", lw=1.0)
+            offset += 1
+    ax.set_yticks(yticks, yticklabels, fontsize=8)
+    ax.set_xticks([])
+    ax.set_title(f"muscle activation (354 muscles)   t = {t:5.2f} s", fontsize=11, pad=8)
+    cbar = fig.colorbar(im, ax=ax, fraction=0.035, pad=0.03)
+    cbar.set_label("activation", fontsize=9)
+    cbar.ax.tick_params(labelsize=8)
 
     fig.canvas.draw()
     frame = np.asarray(fig.canvas.buffer_rgba())[:, :, :3].copy()
     plt.close(fig)
-    return frame
+    return _even(frame)
 
 
 def renderer_camera(model, height=480, width=640):
@@ -133,6 +148,43 @@ def renderer_camera(model, height=480, width=640):
     return renderer, cam
 
 
+def body_frame(renderer, data, cam, t):
+    """Render one body-only frame with a timestamp strip."""
+    renderer.update_scene(data, camera=cam)
+    img = renderer.render()
+    fig, ax = plt.subplots(figsize=(6.4, 4.8), dpi=100)
+    ax.imshow(img)
+    ax.axis("off")
+    ax.set_title(f"t = {t:5.2f} s", fontsize=11)
+    fig.canvas.draw()
+    frame = np.asarray(fig.canvas.buffer_rgba())[:, :, :3].copy()
+    plt.close(fig)
+    return _even(frame)
+
+
+def side_frame(renderer, data, cam, act, order, bounds, t):
+    """Combined body + grid panel (previous style, optional)."""
+    renderer.update_scene(data, camera=cam)
+    body = renderer.render()  # raw body, no timestamp wrapper
+
+    grid_frame = build_grid_frame(act, order, bounds, t)
+    # left-align body to the grid frame height
+    gh, gw = grid_frame.shape[:2]
+    bh = int(gh * 0.62)
+    bw = int(bh * 640 / 480)
+    from PIL import Image
+
+    body_img = np.asarray(Image.fromarray(body).resize((bw, bh)))
+    left = np.full((gh, bw, 3), 0, dtype=np.uint8)
+    left[:bh, :] = body_img
+    return _even(np.concatenate([left, grid_frame], axis=1))
+
+
+def open_writer(path, fps):
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    return imageio.get_writer(str(path), fps=fps, macro_block_size=1)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--checkpoint", default="artifacts/checkpoints/checkpoint_12500")
@@ -142,8 +194,11 @@ def main() -> int:
     ap.add_argument("--seconds", type=float, default=10.0)
     ap.add_argument("--start_step", type=int, default=0)
     ap.add_argument("--video_every", type=int, default=5, help="render every Nth control step")
-    ap.add_argument("--out", default="reports/video/demo_activation.mp4")
-    ap.add_argument("--json_out", default=None, help="optional per-frame group-mean activation JSON")
+    ap.add_argument("--style", choices=("grid", "side"), default="grid",
+                    help="grid: standalone activation grid; side: body+grid combined")
+    ap.add_argument("--out", default="reports/video/demo_activation_grid.mp4")
+    ap.add_argument("--out_body", default=None, help="also write a separate walking video (body only)")
+    ap.add_argument("--json_out", default=None, help="per-frame group-mean activation JSON")
     ap.add_argument("--npz", default=None, help="replay a saved rollout npz instead of stepping the policy")
     args = ap.parse_args()
 
@@ -167,58 +222,67 @@ def main() -> int:
     order = np.concatenate(order_parts)
 
     renderer, cam = renderer_camera(model)
-    out = Path(args.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
     fps = int(round(1.0 / (float(bundle.env.dt) * args.video_every)))
-    writer = imageio.get_writer(str(out), fps=fps, macro_block_size=1)
 
-    group_mean_series = []
+    writers = {}
+    try:
+        if args.style == "grid":
+            writers["grid"] = open_writer(args.out, fps)
+        else:
+            writers["side"] = open_writer(args.out, fps)
+        if args.out_body:
+            writers["body"] = open_writer(args.out_body, fps)
 
-    if args.npz:
-        d = np.load(args.npz)
-        qpos = np.asarray(d["qpos"], float)
-        qvel = np.asarray(d["qvel"], float)
-        act = np.asarray(d["act"], float)
-        t = np.asarray(d["time"], float)
-        try:
+        group_mean_series = []
+
+        def emit(t):
+            act = np.asarray(data.act, dtype=float)[order]
+            means = [float(np.mean(data.act[groups[g]["indices"]])) for g in GROUP_ORDER]
+            group_mean_series.append({"t": float(t), **dict(zip(GROUP_ORDER, means))})
+            if "grid" in writers:
+                writers["grid"].append_data(build_grid_frame(act, order, bounds, t))
+            if "side" in writers:
+                writers["side"].append_data(side_frame(renderer, data, cam, act, order, bounds, t))
+            if "body" in writers:
+                writers["body"].append_data(body_frame(renderer, data, cam, t))
+
+        if args.npz:
+            d = np.load(args.npz)
+            qpos = np.asarray(d["qpos"], float)
+            qvel = np.asarray(d["qvel"], float)
+            act = np.asarray(d["act"], float)
+            t = np.asarray(d["time"], float)
             for i in range(0, len(qpos), args.video_every):
                 data.qpos[:] = qpos[i]
                 data.qvel[:] = qvel[i]
                 data.act[:] = act[i]
                 data.ctrl[:] = 0.0
                 mujoco.mj_forward(model, data)
-                means = [float(np.mean(data.act[groups[g]["indices"]])) for g in GROUP_ORDER]
-                group_mean_series.append({"i": int(i), "t": float(t[i]), **dict(zip(GROUP_ORDER, means))})
-                frame = build_panel(renderer, data, cam, groups, order, bounds, np.asarray(means), float(t[i]))
-                writer.append_data(frame)
-        finally:
-            writer.close()
-    else:
-        policy_fn = make_policy_fn(bundle.agent_conf, deterministic=(args.mode == "deterministic"))
-        train_state = bundle.agent_state.train_state
-        rng = jax.random.key(args.seed)
+                emit(float(t[i]))
+        else:
+            policy_fn = make_policy_fn(bundle.agent_conf, deterministic=(args.mode == "deterministic"))
+            train_state = bundle.agent_state.train_state
+            rng = jax.random.key(args.seed)
 
-        obs = bundle.env.reset()
-        n_steps = 0
-        timeout_steps = int(round(args.seconds / float(bundle.env.dt))) + 1
-        try:
+            obs = bundle.env.reset()
+            n_steps = 0
+            timeout_steps = int(round(args.seconds / float(bundle.env.dt))) + 1
             while n_steps <= timeout_steps:
                 rng, _rng = jax.random.split(rng)
                 action, train_state = policy_fn(train_state, obs, _rng)
                 obs, _, _, done, _ = bundle.env.step(action)
                 n_steps += 1
-                t = float(data.time)
                 if n_steps % args.video_every == 0:
-                    means = [float(np.mean(data.act[groups[g]["indices"]])) for g in GROUP_ORDER]
-                    group_mean_series.append({"i": int(n_steps - 1), "t": t, **dict(zip(GROUP_ORDER, means))})
-                    frame = build_panel(renderer, data, cam, groups, order, bounds, np.asarray(means), t)
-                    writer.append_data(frame)
+                    emit(float(data.time))
                 if done:
                     break
-        finally:
-            writer.close()
+    finally:
+        for w in writers.values():
+            w.close()
 
-    print(f"saved {out}  ({len(group_mean_series)} frames @ {fps} fps)")
+    print(f"saved {args.out}  ({len(group_mean_series)} frames @ {fps} fps)")
+    if args.out_body:
+        print(f"saved {args.out_body}  ({len(group_mean_series)} frames @ {fps} fps)")
 
     if args.json_out:
         jp = Path(args.json_out)
