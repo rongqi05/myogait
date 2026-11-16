@@ -10,10 +10,6 @@ checkpoints/
 __pycache__/
 *.pyc
 
-# experiment output (raw trajectories, videos, logs, per-seed JSON) -- local evidence only
+# experiment output and local reports
 runs/
-reports/figures/
-reports/video/
-reports/logs/
-reports/D_model_divergence/
-reports/*.json
+reports/
