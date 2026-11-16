@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+"""Adaptation-training entry: fine-tune the official mm-10m-2 policy under a
+left-lower-limb F0 deficit, from an 8 GB laptop GPU.
+
+This is the *only* training entry for the impaired-adaptation experiment. It:
+
+  1. applies left-lower-limb F0 scaling to the MJX training model
+     (``scripts/_train_f0.py``) BEFORE the model is compiled for MJX;
+  2. builds the hydra config with the exact architecture the checkpoint was
+     trained with (5x1024, gated residual, LayerNorm, muon), so the weights
+     load instead of hitting ScopeParamNotFoundError;
+  3. resumes from ``experiment.resume_from`` into a fresh, unique checkpoint
+     directory (``auto_resume=false``) so the official weights are never
+     overwritten;
+  4. keeps validation and checkpoint saving ON, and propagates training
+     failures (no ``|| true``).
+
+Usage:
+
+    export PYTHONPATH=external/MuscleMimic:scripts HF_ENDPOINT=https://hf-mirror.com MUJOCO_GL=egl
+    .venv-train/bin/python scripts/train_adapt.py \
+        --f0-left-lower 0.9 --n-env 128 --updates 20 --steps 20 \
+        --reference KIT/3/straight_stitched_10s --out-dir runs/T_adapt
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "external" / "MuscleMimic"))
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+
+os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
+os.environ.setdefault("MUJOCO_GL", "egl")
+os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+
+import _train_f0  # noqa: E402
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--f0-left-lower", type=float, default=1.0, help="left-leg F0 multiplier for training")
+    ap.add_argument("--n-env", type=int, default=128)
+    ap.add_argument("--updates", type=int, default=20, help="number of PPO updates (smoke <= 20)")
+    ap.add_argument("--steps", type=int, default=20, help="PPO rollout steps per update")
+    ap.add_argument("--checkpoint", default="artifacts/checkpoints/checkpoint_12500")
+    ap.add_argument("--reference", default="KIT/3/straight_stitched_10s")
+    ap.add_argument("--out-dir", default="runs/T_adapt")
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--val-num", type=int, default=1, help="number of validations")
+    ap.add_argument("--val-video-length", type=int, default=500, help="validation video length in steps")
+    args = ap.parse_args()
+
+    # --- apply F0 scaling to the MJX model before it is compiled -------------
+    _train_f0.F0_LEFT_LOWER = args.f0_left_lower
+    _train_f0.patch()
+
+    n_env = args.n_env
+    updates = args.updates
+    steps = args.steps
+    total = n_env * steps * updates
+
+    out_dir = Path(args.out_dir).expanduser()
+    hydra_dir = out_dir / "hydra"
+    ckpt_root = (out_dir / "checkpoints").as_posix()
+
+    # mm-10m-2 architecture (from the checkpoint's own metadata): 5x1024,
+    # silu, LayerNorm, gated residual, muon. The stock conf_fullbody.yaml
+    # defaults to a 16-layer network WITHOUT residual, so these overrides are
+    # what make the official weights load at all.
+    overrides = [
+        "--config-name=conf_fullbody",
+        "wandb.mode=disabled",
+        f"experiment.env_params.num_envs={n_env}",
+        f"experiment.num_envs={n_env}",
+        "experiment.env_params.horizon=1000",
+        "experiment.actor_hidden_layers=[1024,1024,1024,1024,1024]",
+        "experiment.critic_hidden_layers=[1024,1024,1024,1024,1024]",
+        "experiment.use_layernorm=true",
+        "+experiment.use_residual=true",
+        "+experiment.residual_type=gated",
+        "+experiment.residual_gate_init=-2.0",
+        "experiment.use_moe=false",
+        "experiment.optimizer_type=muon",
+        f"experiment.ppo_config.num_steps={steps}",
+        "experiment.ppo_config.num_minibatches=128",
+        f"experiment.total_timesteps={total}",
+        f"experiment.seeds=[{args.seed}]",
+        f"experiment.resume_from={args.checkpoint}",
+        "experiment.auto_resume=false",
+        f"experiment.checkpoint_root={ckpt_root}",
+        # training reference (single local clip; no HF dataset-group download)
+        f"+experiment.task_factory.params.amass_dataset_conf.rel_dataset_path=[{args.reference}]",
+        "experiment.task_factory.params.amass_dataset_conf.dataset_group=null",
+        "+experiment.task_factory.params.amass_dataset_conf.retargeting_method=gmr",
+        # validation ON, pointing at the same local reference (no testing-group download)
+        "experiment.validation.active=true",
+        f"experiment.validation.num={args.val_num}",
+        "experiment.validation.num_envs=32",
+        "experiment.validation.num_steps=200",
+        f"experiment.validation.video_length={args.val_video_length}",
+        f"+experiment.validation.amass_dataset_conf.rel_dataset_path=[{args.reference}]",
+        "experiment.validation.amass_dataset_conf.dataset_group=null",
+        "+experiment.validation.amass_dataset_conf.retargeting_method=gmr",
+        f"hydra.run.dir={hydra_dir}",
+    ]
+
+    print("[train_adapt] overrides:", flush=True)
+    for o in overrides:
+        print(f"  {o}", flush=True)
+    print(
+        f"[train_adapt] f0_left_lower={args.f0_left_lower} n_env={n_env} "
+        f"updates={updates} steps={steps} total={total}", flush=True
+    )
+
+    # Run the upstream experiment entry via runpy so hydra resolves its
+    # config_path relative to fullbody/experiment.py (importing the decorated
+    # function from here makes hydra look for a 'fullbody' package instead).
+    import runpy  # noqa: E402
+
+    sys.argv = ["experiment.py"] + overrides
+    runpy.run_path(
+        str(REPO_ROOT / "external" / "MuscleMimic" / "fullbody" / "experiment.py"),
+        run_name="__main__",
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
