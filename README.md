@@ -14,11 +14,7 @@
 
 20 s 的“不跌倒”和“沿直线保持在阈值内”分别统计。当前 0.35 m 侧偏上限是本仓库预设的工程验收线，尚未用临床数据确定。上表的连续行走与减力实验采用不同参考，数值不能作为同一组配对比较。减力后尚未训练适应策略；跌倒结果反映冻结正常策略受到损伤参数扰动后的反应，不能直接称为偏瘫步态。
 
-实验细节和逐种子证据：
-
-- [R：连续步态基线](reports/R_continuous_gait_baseline.md)；[逐种子表](reports/R_v2_per_seed.csv)
-- [P：上肢、下肢分区减力](reports/P_f0_upper_lower_ablation.md)；[Q：上肢强度扫描](reports/Q_upper_limb_feasible_range.md)
-- [O：单侧肌力缩放](reports/O_muscle_force_scaling.md)；[验收口径](configs/eval_walk.json)
+实验报告和逐种子表已从仓库移除。运行时产生的轨迹和汇总保存在本地 `runs/`；验收参数与指标定义见 [`configs/eval_walk.json`](configs/eval_walk.json)。
 
 ## 代码和数据
 
@@ -30,7 +26,7 @@
 | `scripts/run_f0_ablation.sh` | 顺序运行上肢、下肢和旧语义减力对照 |
 | `scripts/train_straight_bounded.sh` | 8 GB 显存配置的训练试验入口；仓库目前采用的主要结果来自官方 checkpoint |
 
-上游代码、checkpoint、重定向后的 `.npz` 与原始回放日志未随仓库提交。R 报告中的 CMU 136 连续参考由五段同一受试者的运动拼接而成（28.37 s）；接缝做过姿态插值，尚需检查接缝附近动力学。构建该参考的数据处理脚本已从当前分支移除，可在历史提交 `bc8a8fe` 查阅。若本地没有相应 `.npz`，下面的 20 s 命令无法直接运行。
+上游代码、checkpoint、重定向后的 `.npz` 与原始回放日志未随仓库提交。20 s 实验使用的 CMU 136 连续参考由五段同一受试者的运动拼接而成（28.37 s）；接缝做过姿态插值，尚需检查接缝附近动力学。构建该参考的数据处理脚本已从当前分支移除，可在历史提交 `bc8a8fe` 查阅。若本地没有相应 `.npz`，下面的 20 s 命令无法直接运行。
 
 ## 运行环境
 
