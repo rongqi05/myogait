@@ -82,6 +82,51 @@ def effective_start_lr(
     return float(linear_lr_schedule(step, num_minibatches, update_epochs, base_lr, num_updates))
 
 
+def _jsonable(v):
+    """Best-effort conversion of a logged value to plain JSON."""
+    try:
+        import numpy as np
+
+        if isinstance(v, (np.floating,)):
+            return float(v)
+        if isinstance(v, (np.integer,)):
+            return int(v)
+        if isinstance(v, (np.ndarray,)):
+            return v.tolist()
+    except Exception:
+        pass
+    if isinstance(v, (int, float, str, bool)) or v is None:
+        return v
+    return str(v)
+
+
+class _MetricsJSONLHooks:
+    """Wraps UnifiedHooks and appends every log_dict to a JSONL file.
+
+    With ``wandb.mode=disabled`` the upstream callback drops all per-update
+    metrics (lr / KL / clip fraction / policy_std). Writing them to JSONL keeps
+    them inspectable without enabling wandb.
+    """
+
+    @staticmethod
+    def build(metrics_path: Path):
+        from musclemimic.runner.logging import UnifiedHooks as _UH
+
+        class _Hooks(_UH):
+            def enrich_log(self, log_dict, metrics_dict, env):
+                try:
+                    payload = {
+                        k: _jsonable(v) for k, v in log_dict.items() if not k.startswith("_")
+                    }
+                    with metrics_path.open("a") as fh:
+                        fh.write(__import__("json").dumps(payload) + "\n")
+                except Exception as exc:  # never break training for logging
+                    print(f"warning: metrics jsonl write failed: {exc}")
+                return super().enrich_log(log_dict, metrics_dict, env)
+
+        return _Hooks
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--f0-left-lower", type=float, default=1.0, help="left-leg F0 multiplier for training")
@@ -104,6 +149,17 @@ def main() -> int:
         "--check-lr-only",
         action="store_true",
         help="print the effective first-update learning rate and exit (pre-flight check)",
+    )
+    ap.add_argument(
+        "--checkpoint-interval",
+        type=int,
+        default=5,
+        help="save a checkpoint every N updates (0 = only on validation / at the end)",
+    )
+    ap.add_argument(
+        "--metrics-jsonl",
+        default=None,
+        help="per-update metrics JSONL (default: <out-dir>/metrics.jsonl)",
     )
     args = ap.parse_args()
 
@@ -147,6 +203,9 @@ def main() -> int:
     out_dir = Path(args.out_dir).expanduser()
     hydra_dir = out_dir / "hydra"
     ckpt_root = (out_dir / "checkpoints").as_posix()
+    metrics_path = Path(args.metrics_jsonl).expanduser() if args.metrics_jsonl else (out_dir / "metrics.jsonl")
+    metrics_path.parent.mkdir(parents=True, exist_ok=True)
+    metrics_path.write_text("")  # fresh file per run
 
     # mm-10m-2 architecture (from the checkpoint's own metadata): 5x1024,
     # silu, LayerNorm, gated residual, muon. The stock conf_fullbody.yaml
@@ -187,8 +246,16 @@ def main() -> int:
         f"+experiment.validation.amass_dataset_conf.rel_dataset_path=[{args.reference}]",
         "experiment.validation.amass_dataset_conf.dataset_group=null",
         "+experiment.validation.amass_dataset_conf.retargeting_method=gmr",
+        f"+experiment.checkpoint_interval={args.checkpoint_interval}",
         f"hydra.run.dir={hydra_dir}",
     ]
+
+    # Route the upstream UnifiedHooks through a JSONL sink so per-update
+    # lr / KL / clip fraction / policy_std survive wandb being disabled.
+    import musclemimic.runner.logging as _logging
+
+    _logging.UnifiedHooks = _MetricsJSONLHooks.build(metrics_path)
+    print(f"[train_adapt] metrics -> {metrics_path}", flush=True)
 
     print("[train_adapt] overrides:", flush=True)
     for o in overrides:
