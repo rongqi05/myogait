@@ -40,6 +40,47 @@ os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
 
 import _train_f0  # noqa: E402
 
+# The upstream LR schedule is linear in the *optimizer step counter*:
+#   frac = 1 - (step // (num_minibatches * update_epochs)) / num_updates
+# Resuming restores `step` from the checkpoint (~1.6e6) while `num_updates`
+# is only the fine-tuning budget (20/100), so frac goes sharply negative and
+# the run trains with a NEGATIVE learning rate. That is what destroyed the
+# first adaptation round; `reset_lr_schedule_on_resume=true` zeroes the
+# counter (optimizer momentum is kept) and restores a positive LR.
+LR_RESET_ON_RESUME = True
+
+
+def resume_step(checkpoint_path: str) -> int:
+    """Optimizer step stored in the checkpoint (0 if it cannot be read)."""
+    from musclemimic.runner.checkpointing import _canonicalize_resume_path
+
+    try:
+        resolved = Path(_canonicalize_resume_path(checkpoint_path))
+        meta = resolved / "metadata" / "metadata"
+        if meta.exists():
+            import json
+
+            return int(json.loads(meta.read_text()).get("step", 0) or 0)
+    except Exception:
+        pass
+    return 0
+
+
+def effective_start_lr(
+    *,
+    resumed_step: int,
+    num_minibatches: int,
+    update_epochs: int,
+    base_lr: float,
+    num_updates: int,
+    reset_lr_schedule: bool,
+) -> float:
+    """The LR the first PPO update will actually use (mirrors the upstream call)."""
+    from musclemimic.algorithms.common.optimizer import linear_lr_schedule
+
+    step = 0 if reset_lr_schedule else resumed_step
+    return float(linear_lr_schedule(step, num_minibatches, update_epochs, base_lr, num_updates))
+
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -53,7 +94,46 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--val-num", type=int, default=1, help="number of validations")
     ap.add_argument("--val-video-length", type=int, default=500, help="validation video length in steps")
+    ap.add_argument(
+        "--no-reset-lr-schedule",
+        dest="reset_lr_schedule",
+        action="store_false",
+        help="keep the checkpoint's optimizer-step counter (yields a negative LR for short budgets)",
+    )
+    ap.add_argument(
+        "--check-lr-only",
+        action="store_true",
+        help="print the effective first-update learning rate and exit (pre-flight check)",
+    )
     args = ap.parse_args()
+
+    # --- pre-flight: the resumed run must start with a positive LR ----------
+    num_minibatches = 128
+    update_epochs = 1
+    base_lr = 4e-4
+    step0 = resume_step(args.checkpoint)
+    lr0 = effective_start_lr(
+        resumed_step=step0,
+        num_minibatches=num_minibatches,
+        update_epochs=update_epochs,
+        base_lr=base_lr,
+        num_updates=args.updates,
+        reset_lr_schedule=args.reset_lr_schedule,
+    )
+    print(
+        f"[train_adapt] resume step={step0} updates={args.updates} "
+        f"reset_lr_schedule={args.reset_lr_schedule} -> first-update LR={lr0:+.6f}",
+        flush=True,
+    )
+    if lr0 <= 0.0:
+        raise SystemExit(
+            "REFUSING TO TRAIN: the first PPO update would use a non-positive learning rate "
+            f"({lr0:+.6f}). The checkpoint's optimizer step ({step0}) exceeds the fine-tuning "
+            "budget (num_updates="f"{args.updates}), so the linear LR schedule goes negative. "
+            "Run with the default --reset-lr-schedule (step counter zeroed, momentum kept)."
+        )
+    if args.check_lr_only:
+        return 0
 
     # --- apply F0 scaling to the MJX model before it is compiled -------------
     _train_f0.F0_LEFT_LOWER = args.f0_left_lower
@@ -92,6 +172,7 @@ def main() -> int:
         f"experiment.seeds=[{args.seed}]",
         f"experiment.resume_from={args.checkpoint}",
         "experiment.auto_resume=false",
+        f"experiment.reset_lr_schedule_on_resume={'true' if args.reset_lr_schedule else 'false'}",
         f"experiment.checkpoint_root={ckpt_root}",
         # training reference (single local clip; no HF dataset-group download)
         f"+experiment.task_factory.params.amass_dataset_conf.rel_dataset_path=[{args.reference}]",
