@@ -25,6 +25,10 @@
 | `scripts/check_f0_groups.py` | 检查肌肉分组和 \(F_0\) 缩放对象 |
 | `scripts/run_f0_ablation.sh` | 顺序运行上肢、下肢和旧语义减力对照 |
 | `scripts/train_straight_bounded.sh` | 8 GB 显存配置的训练试验入口；仓库目前采用的主要结果来自官方 checkpoint |
+| `crutch_robot.xml` | 拐杖机器人模型：全向底盘（X/Y slide + yaw hinge，仅阻尼）、1.00 m 支撑杆、水平把手、两条软 connect 握持约束、力/力矩与底盘位姿传感器 |
+| `env_step_snippet.py` | 底盘随行控制、辅助模式切换、握点对齐、力传感与最小验收；`python env_step_snippet.py` 可跑自检 |
+
+拐杖机器人目前是独立可编译的演示模型，尚未接入 `eval_walk.py`。演示里把手高度为 1.30 m（离地间隙 0.05 + 底盘 0.25 + 杆 1.00），而 MyoFullBody 的手部 site 在自然姿态下约 0.90 m，两者相差 0.40 m；接入时必须调整杆长或抬高手臂，`CrutchInterface.validate()` 会直接报出这个差值和建议杆长。握持用 `connect`（球铰），只传力不传力矩。
 
 上游代码、checkpoint、重定向后的 `.npz` 与原始回放日志未随仓库提交。20 s 实验使用的 CMU 136 连续参考由五段同一受试者的运动拼接而成（28.37 s）；接缝做过姿态插值，尚需检查接缝附近动力学。构建该参考的数据处理脚本已从当前分支移除，可在历史提交 `bc8a8fe` 查阅。若本地没有相应 `.npz`，下面的 20 s 命令无法直接运行。
 
