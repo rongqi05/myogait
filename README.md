@@ -27,6 +27,8 @@
 | `scripts/train_straight_bounded.sh` | 8 GB 显存配置的训练试验入口；仓库目前采用的主要结果来自官方 checkpoint |
 | `crutch_robot.xml` | 拐杖机器人模型：全向底盘（X/Y slide + yaw hinge，仅阻尼）、1.00 m 支撑杆、Ø64 mm 球形把手（球心即握点，z = 1.30 m）、两条软 connect 握持约束、力/力矩与底盘位姿传感器 |
 | `env_step_snippet.py` | 底盘随行控制、辅助模式切换、握点对齐、力传感与最小验收；`python env_step_snippet.py` 可跑自检 |
+| `scripts/crutch_env.py` | 把 `crutch_robot.xml` 挂进人体 MuJoCo 场景（`mount` / `layout` / `reach`），并保证策略观测与动作维度不变 |
+| `scripts/run_crutch_baseline.py` | 完整肌力持杖基线：标定握点、四组条件（无拐杖 / 随行不握持 / 左握 / 右握）、逐种子指标与三组并排视频 |
 
 拐杖机器人目前是独立可编译的演示模型，尚未接入 `eval_walk.py`。演示里把手高度为 1.30 m（离地间隙 0.05 + 底盘 0.25 + 杆 1.00），而 MyoFullBody 的手部 site 在自然姿态下约 0.90 m，两者相差 0.40 m；接入时必须调整杆长或抬高手臂，`CrutchInterface.validate()` 会直接报出这个差值和建议杆长。握持用 `connect`（球铰），只传力不传力矩。
 

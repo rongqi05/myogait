@@ -31,6 +31,7 @@ import numpy as np
 # --------------------------------------------------------------------------
 DEFAULTS = {
     "xml": "crutch_robot.xml",
+    "prefix": "",              # "crutch/" once mounted into the human scene
     # 几何（与 crutch_robot.xml 对齐，validate() 会核对）
     "chassis_half_size": (0.195, 0.145, 0.125),
     "chassis_mass": 15.5,
@@ -77,17 +78,19 @@ class CrutchInterface:
             self.cfg.update(cfg)
         self.control_dt = float(model.opt.timestep) * int(self.cfg["frame_skip"])
 
-        self.body_chassis = _id(model, mujoco.mjtObj.mjOBJ_BODY, "chassis")
-        self.body_handle = _id(model, mujoco.mjtObj.mjOBJ_BODY, "handle")
-        self.site_grip = _id(model, mujoco.mjtObj.mjOBJ_SITE, "grip_point")
-        self.site_chassis = _id(model, mujoco.mjtObj.mjOBJ_SITE, "chassis_center")
-        self.jnt_x = _id(model, mujoco.mjtObj.mjOBJ_JOINT, "slide_x")
-        self.jnt_y = _id(model, mujoco.mjtObj.mjOBJ_JOINT, "slide_y")
+        p = str(self.cfg["prefix"])
+        self.prefix = p
+        self.body_chassis = _id(model, mujoco.mjtObj.mjOBJ_BODY, p + "chassis")
+        self.body_handle = _id(model, mujoco.mjtObj.mjOBJ_BODY, p + "handle")
+        self.site_grip = _id(model, mujoco.mjtObj.mjOBJ_SITE, p + "grip_point")
+        self.site_chassis = _id(model, mujoco.mjtObj.mjOBJ_SITE, p + "chassis_center")
+        self.jnt_x = _id(model, mujoco.mjtObj.mjOBJ_JOINT, p + "slide_x")
+        self.jnt_y = _id(model, mujoco.mjtObj.mjOBJ_JOINT, p + "slide_y")
         self.dof_x = int(model.jnt_dofadr[self.jnt_x])
         self.dof_y = int(model.jnt_dofadr[self.jnt_y])
-        self.act = {n: _id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, n) for n in ("crutch_x", "crutch_y")}
-        self.eq = {s: _id(model, mujoco.mjtObj.mjOBJ_EQUALITY, f"grip_{s[0]}") for s in ("left", "right")}
-        self.sens = {n: _id(model, mujoco.mjtObj.mjOBJ_SENSOR, n)
+        self.act = {n: _id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, p + n) for n in ("crutch_x", "crutch_y")}
+        self.eq = {s: _id(model, mujoco.mjtObj.mjOBJ_EQUALITY, f"{p}grip_{s[0]}") for s in ("left", "right")}
+        self.sens = {n: _id(model, mujoco.mjtObj.mjOBJ_SENSOR, p + n)
                      for n in ("grip_force", "grip_torque", "chassis_pos", "chassis_vel")}
         self.body_hand, self.site_hand = {}, {}
         for s in ("left", "right"):
@@ -99,6 +102,8 @@ class CrutchInterface:
         self.tare = np.zeros(3)
         self.tare_set = False
         self._v_prev = np.zeros(2)
+        self._v_cmd = np.zeros(2)
+        self._plan_info: dict = {}
         self._v_meas_prev = np.zeros(2)
         self._heading = np.array([1.0, 0.0])
         self.mode, self.affected_side, self.active_side = "none", "left", None
@@ -225,43 +230,57 @@ class CrutchInterface:
                 "dv_limit": dv_limit, "dv_limited": dv_limited, "speed_limited": speed_limited}
         return v_cmd, info
 
-    def step(self, human_pos, human_vel, muscle_act) -> dict:
-        """推进一个控制步：写入底盘速度伺服与人体肌肉动作，返回诊断量。"""
-        u = np.asarray(muscle_act, dtype=float).ravel()
-        if u.size != self.muscle_ids.size:
-            raise ValueError(f"muscle action size {u.size} != model slots {self.muscle_ids.size}")
+    def command(self, human_pos, human_vel) -> dict:
+        """写入底盘速度伺服指令，不推进物理（由调用方的 step 负责）。
 
+        与 ``observe()`` 配对使用，用于人体与拐杖共用一个 MjModel 的场景：
+        先 ``command()``，再让环境的 step 推进，最后 ``observe()``。
+        """
         v_cmd, info = self._plan(human_pos, human_vel)
         self.d.ctrl[self.act["crutch_x"]] = v_cmd[0]
         self.d.ctrl[self.act["crutch_y"]] = v_cmd[1]
+        self._v_cmd = np.array(v_cmd, copy=True)
+        self._plan_info = info
+        return {"v_cmd": self._v_cmd.copy(), **info}
+
+    def observe(self) -> dict:
+        """读取推进后的传感器与实测速度/加速度。"""
+        v_meas = np.array([self.d.qvel[self.dof_x], self.d.qvel[self.dof_y]])
+        a_meas = (v_meas - self._v_meas_prev) / self.control_dt
+        self._v_prev = self._v_cmd
+        self._v_meas_prev = v_meas
+        forces = np.array([self.d.actuator_force[self.act["crutch_x"]],
+                           self.d.actuator_force[self.act["crutch_y"]]])
+        fr = np.abs(self.m.actuator_forcerange[[self.act["crutch_x"], self.act["crutch_y"]], 1])
+        out = self.read()
+        out.update({
+            "t": float(self.d.time),
+            "v_cmd": self._v_cmd.copy(), "v_meas": v_meas, "a_meas": a_meas,
+            "actuator_force": forces,
+            "force_saturated": bool(np.any(np.abs(forces) >= fr - 1e-9)),
+            **self._plan_info,
+        })
+        self.last = out
+        return out
+
+    def step(self, human_pos, human_vel, muscle_act) -> dict:
+        """独立模型用：写入底盘与人体肌肉指令并推进 frame_skip 个物理步。"""
+        u = np.asarray(muscle_act, dtype=float).ravel()
+        if u.size != self.muscle_ids.size:
+            raise ValueError(f"muscle action size {u.size} != model slots {self.muscle_ids.size}")
+        self.command(human_pos, human_vel)
         self.d.ctrl[self.muscle_ids] = u
         for _ in range(int(self.cfg["frame_skip"])):
             mujoco.mj_step(self.m, self.d)
         # mj_step 在积分前的 forward 阶段算传感器，这里补一次 forward，
         # 使读出的力/速度与控制步结束时刻的 t 对齐
         mujoco.mj_forward(self.m, self.d)
-
-        v_meas = np.array([self.d.qvel[self.dof_x], self.d.qvel[self.dof_y]])
-        a_meas = (v_meas - self._v_meas_prev) / self.control_dt
-        self._v_prev = v_cmd
-        self._v_meas_prev = v_meas
-
-        forces = np.array([self.d.actuator_force[self.act["crutch_x"]], self.d.actuator_force[self.act["crutch_y"]]])
-        fr = np.abs(self.m.actuator_forcerange[[self.act["crutch_x"], self.act["crutch_y"]], 1])
-        out = self.read()
-        out.update({
-            "t": float(self.d.time),
-            "v_cmd": v_cmd, "v_meas": v_meas, "a_meas": a_meas,
-            "actuator_force": forces, "force_saturated": bool(np.any(np.abs(forces) >= fr - 1e-9)),
-            **{k: v for k, v in info.items()},
-        })
-        self.last = out
-        return out
+        return self.observe()
 
     # ---------------- 验收辅助 ----------------
     def _handle_report(self) -> dict:
         """把手几何与演示假手到把手表面的间隙（球把手才给间隙）。"""
-        g = _id(self.m, mujoco.mjtObj.mjOBJ_GEOM, "handle_bar")
+        g = _id(self.m, mujoco.mjtObj.mjOBJ_GEOM, self.prefix + "handle_bar")
         size = [round(float(v), 4) for v in self.m.geom_size[g][:3]]
         kind = int(self.m.geom_type[g])
         out = {"handle_geom_type": {2: "sphere", 5: "cylinder", 6: "box", 3: "capsule"}.get(kind, str(kind)),
@@ -269,15 +288,16 @@ class CrutchInterface:
         dc = float(np.linalg.norm(self.d.site_xpos[self.site_hand["left"]] - self.d.xpos[self.body_handle]))
         out["demo_hand_to_handle_center_m"] = round(dc, 4)
         if kind == 2:
-            stub = _id(self.m, mujoco.mjtObj.mjOBJ_GEOM, "hand_stub_l_geom")
-            gap = dc - float(self.m.geom_size[g][0]) - float(self.m.geom_size[stub][0])
-            out["demo_handle_surface_gap_m"] = round(gap, 4)
+            stub_id = mujoco.mj_name2id(self.m, mujoco.mjtObj.mjOBJ_GEOM, self.prefix + "hand_stub_l_geom")
+            if stub_id >= 0:
+                gap = dc - float(self.m.geom_size[g][0]) - float(self.m.geom_size[stub_id][0])
+                out["demo_handle_surface_gap_m"] = round(gap, 4)
         return out
 
     def validate(self) -> dict:
         m = self.m
         gz = float(np.abs(m.opt.gravity[2]))
-        box = _id(m, mujoco.mjtObj.mjOBJ_GEOM, "chassis_box")
+        box = _id(m, mujoco.mjtObj.mjOBJ_GEOM, self.prefix + "chassis_box")
         half_z = float(m.geom_size[box][2])
         handle_z = float(self.d.xpos[self.body_handle][2])
         rods = handle_z - float(self.d.xpos[self.body_chassis][2]) - half_z
@@ -300,7 +320,8 @@ class CrutchInterface:
             "hand_height_ref_m": round(ref_z, 4),
             "rod_length_for_hand_ref_m": round(rod_for_ref, 4),
             "handle_over_hand_ref_m": round(handle_z - ref_z, 4),
-            "crutch_mass_kg": round(float(m.body_mass[self.body_chassis] + m.body_mass[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "rod")]
+            "crutch_mass_kg": round(float(m.body_mass[self.body_chassis]
+                                          + m.body_mass[_id(m, mujoco.mjtObj.mjOBJ_BODY, self.prefix + "rod")]
                                           + m.body_mass[self.body_handle]), 3),
             **self._handle_report(),
             "model_total_weight_N": round(float(m.body_mass.sum()) * gz, 2),
