@@ -32,7 +32,6 @@ import jax.numpy as jnp
 import mujoco
 import numpy as np
 
-import _cane
 from _env_builder import (
     build_eval_bundle,
     env_data,
@@ -160,34 +159,6 @@ def contact_state(model, data, geom_sets, force_threshold=20.0):
     return out
 
 
-def total_vertical_grf(model, data, cane_geoms=None):
-    """Total vertical ground reaction, split into feet and cane.
-
-    Only contacts with the ground count. ``abs(n_z)`` because MuJoCo orders the
-    contact frame normal from geom1 to geom2, so its sign flips depending on
-    which geom is the floor. The whole-episode integral of this quantity must
-    close with m*g*T + m*Delta v_z; that is the check that nothing but floor
-    contact is holding the body up.
-    """
-    gid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "floor")
-    total = feet = cane = 0.0
-    fbuf = np.zeros(6, dtype=float)
-    for i in range(data.ncon):
-        c = data.contact[i]
-        g1, g2 = int(c.geom1), int(c.geom2)
-        if gid < 0 or (g1 != gid and g2 != gid):
-            continue
-        mujoco.mj_contactForce(model, data, i, fbuf)
-        fz = abs(float(fbuf[0])) * abs(float(np.asarray(c.frame[:3])[2]))
-        total += fz
-        other = g2 if g1 == gid else g1
-        if cane_geoms and other in cane_geoms:
-            cane += fz
-        else:
-            feet += fz
-    return total, feet, cane
-
-
 def reference_frame(env, np_backend=np):
     """Current reference frame (qpos, site_xpos) and its index."""
     carry = env._additional_carry
@@ -253,16 +224,9 @@ def rollout(
     f0_left_lower: float = 1.0,
     f0_right_upper: float = 1.0,
     f0_right_lower: float = 1.0,
-    cane_side: str = "none",
-    cane_length: float = 0.90,
 ) -> dict:
     deterministic = mode == "deterministic"
     t_build = time.time()
-    # The cane must be in the spec *before* the env compiles its model, so the
-    # patch is installed before build_eval_bundle.
-    if cane_side != "none":
-        _cane.configure(side=cane_side, length=cane_length)
-        _cane.patch()
     bundle = build_eval_bundle(
         checkpoint_path=checkpoint,
         motion_path=motion_path,
@@ -295,19 +259,6 @@ def rollout(
     geom_sets = foot_geom_sets(model)
     if not geom_sets["left"] or not geom_sets["right"]:
         raise RuntimeError(f"could not identify foot geoms: {geom_sets}")
-
-    # ---- cane (optional): tip geoms, body weight for support ratios ----------
-    cane_gids = _cane.cane_geom_ids(model) if cane_side != "none" else set()
-    cane_info: dict = {"enabled": bool(cane_gids), "side": cane_side, "length": cane_length}
-    if cane_side != "none":
-        cane_bid = _cane.cane_body_id(model)
-        if cane_bid < 0 or not cane_gids:
-            raise RuntimeError("cane requested but not present in the compiled model")
-        cane_info["body_id"] = int(cane_bid)
-        cane_info["geom_ids"] = sorted(int(g) for g in cane_gids)
-        gz = float(np.abs(model.opt.gravity[2]))
-        cane_info["body_weight_N"] = float(np.sum(model.body_mass) * gz)
-        cane_info["cane_mass_kg"] = float(np.sum(model.body_mass[cane_bid]))
 
     torso_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "torso")
     pelvis_site = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "pelvis_mimic")
@@ -434,12 +385,6 @@ def rollout(
         act = np.array(data.act, copy=True) if data.act.size else np.zeros(0)
         aforce = np.array(data.actuator_force, copy=True)
         cs = contact_state(model, data, geom_sets)
-        cane = _cane.cane_grf(model, data, cane_gids) if cane_gids else {
-            "normal": 0.0, "vertical": 0.0, "ncon": 0, "contact": False,
-            "point": np.zeros(3), "tip_lowest_z": float("nan"),
-        }
-        cane_tip_z = float(cane["tip_lowest_z"])
-        grf_total, grf_feet, grf_cane = total_vertical_grf(model, data, cane_gids)
         qfrc_applied_max = float(np.max(np.abs(data.qfrc_applied))) if data.qfrc_applied.size else 0.0
         xfrc_applied_max = float(np.max(np.abs(data.xfrc_applied))) if data.xfrc_applied.size else 0.0
 
@@ -527,13 +472,6 @@ def rollout(
                 "contact_right_force": cs["right"],
                 "contact_left": cs["left_on"],
                 "contact_right": cs["right_on"],
-                "cane_normal_force": float(cane["normal"]),
-                "cane_vertical_force": float(cane["vertical"]),
-                "cane_contact": bool(cane["contact"]),
-                "cane_tip_z": cane_tip_z,
-                "grf_vertical_total": grf_total,
-                "grf_vertical_feet": grf_feet,
-                "grf_vertical_cane": grf_cane,
                 "foot_left_speed": foot_info["left"]["speed"],
                 "foot_right_speed": foot_info["right"]["speed"],
                 "foot_slip_speed_left": cs["left_slip"],
@@ -749,36 +687,6 @@ def rollout(
     slip_per_meter = {
         k: (slip[k] / forward_dist if forward_dist > 0.2 else float("nan")) for k in ("left", "right")
     }
-
-    # ---- cane support metrics ------------------------------------------------
-    cane_metrics: dict = {}
-    if cane_gids and steps:
-        body_w = cane_info["body_weight_N"]
-        cv = np.array([s["cane_vertical_force"] for s in steps], dtype=float)
-        cn = np.array([s["cane_normal_force"] for s in steps], dtype=float)
-        tz = np.array([s["cane_tip_z"] for s in steps], dtype=float)
-        on = np.array([s["cane_contact"] for s in steps], dtype=bool)
-        loaded = cv > 5.0
-        cane_metrics = {
-            "cane_support_mean_N": float(np.mean(cv)),
-            "cane_support_peak_N": float(np.max(cv)),
-            "cane_support_p95_N": float(np.percentile(cv, 95)),
-            "cane_support_mean_pct_bw": float(100.0 * np.mean(cv) / body_w) if body_w > 0 else float("nan"),
-            "cane_support_peak_pct_bw": float(100.0 * np.max(cv) / body_w) if body_w > 0 else float("nan"),
-            "cane_normal_mean_N": float(np.mean(cn)),
-            "cane_contact_fraction": float(np.mean(on)),
-            "cane_load_fraction": float(np.mean(loaded)),
-            # support while loaded = the physically meaningful per-stance load
-            "cane_support_mean_loaded_N": float(np.mean(cv[loaded])) if loaded.any() else 0.0,
-            "cane_support_mean_loaded_pct_bw": (float(100.0 * np.mean(cv[loaded]) / body_w) if loaded.any() and body_w > 0 else 0.0),
-            "cane_n_contact_steps": int(on.sum()),
-            "cane_tip_lowest_z_min": float(np.nanmin(tz)) if np.isfinite(tz).any() else float("nan"),
-            "cane_tip_lowest_z_mean": float(np.nanmean(tz)) if np.isfinite(tz).any() else float("nan"),
-            "cane_tip_penetration_fraction": float(np.mean(tz < -0.001)) if np.isfinite(tz).any() else 0.0,
-        }
-    elif cane_gids:
-        cane_metrics = {"cane_support_mean_N": 0.0, "cane_support_peak_N": 0.0, "cane_contact_fraction": 0.0}
-
     completed_clip_clean = (
         reason == "clip_end"
         and criteria["no_physical_fall"]
@@ -822,9 +730,6 @@ def rollout(
         "double_support_fraction_walking": ds_frac,
         "walking_window_forward_speed": walk_forward_speed,
         "slip_per_meter": slip_per_meter,
-        "total_mass_kg": float(np.sum(model.body_mass)),
-        "cane": cane_info,
-        "cane_metrics": cane_metrics,
         "handler_checks_at_end": handler_checks,
         "clip_ended": clip_end,
         "perturbation": perturb_info,
@@ -904,13 +809,6 @@ def rollout(
             foot_right_speed=np.array([s["foot_right_speed"] for s in steps]),
             foot_slip_speed_left=np.array([s["foot_slip_speed_left"] for s in steps]),
             foot_slip_speed_right=np.array([s["foot_slip_speed_right"] for s in steps]),
-            cane_normal_force=np.array([s["cane_normal_force"] for s in steps]),
-            cane_vertical_force=np.array([s["cane_vertical_force"] for s in steps]),
-            cane_contact=np.array([s["cane_contact"] for s in steps]),
-            cane_tip_z=np.array([s["cane_tip_z"] for s in steps]),
-            grf_vertical_total=np.array([s["grf_vertical_total"] for s in steps]),
-            grf_vertical_feet=np.array([s["grf_vertical_feet"] for s in steps]),
-            grf_vertical_cane=np.array([s["grf_vertical_cane"] for s in steps]),
             tilt_pelvis_deg=np.array([s["tilt_pelvis_deg"] for s in steps]),
             tilt_torso_deg=np.array([s["tilt_torso_deg"] for s in steps]),
             reward=np.array([s["reward"] for s in steps]),
@@ -1014,20 +912,6 @@ def main() -> int:
         help="scale F0 of the 40 right-leg muscles only ('_r' leg muscles)",
     )
     ap.add_argument(
-        "--cane-side",
-        default="none",
-        choices=["none", "left", "right"],
-        help="attach a rigid cane held by an ideal fixed grasp in this hand "
-        "(welded to radius_l/radius_r; nq/nv unchanged). 'right' = contralateral "
-        "to a left-sided deficit, 'left' = ipsilateral.",
-    )
-    ap.add_argument(
-        "--cane-length",
-        type=float,
-        default=0.90,
-        help="cane length in m, grip point to lowest tip point (default 0.90)",
-    )
-    ap.add_argument(
         "--horizon",
         type=int,
         default=None,
@@ -1074,8 +958,6 @@ def main() -> int:
             f0_left_lower=args.f0_left_lower,
             f0_right_upper=args.f0_right_upper,
             f0_right_lower=args.f0_right_lower,
-            cane_side=args.cane_side,
-            cane_length=args.cane_length,
         )
         results.append(r)
         print(
