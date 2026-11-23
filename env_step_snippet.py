@@ -70,6 +70,8 @@ class CrutchInterface:
 
     def __init__(self, model: mujoco.MjModel, data: mujoco.MjData, cfg: dict | None = None):
         self.m, self.d = model, data
+        # 调用方可能只给了 MjData(model)，此时派生量（site_xpos/xmat/sensordata）尚未有效
+        mujoco.mj_forward(model, data)
         self.cfg = dict(DEFAULTS)
         if cfg:
             self.cfg.update(cfg)
