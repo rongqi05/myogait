@@ -259,6 +259,21 @@ class CrutchInterface:
         return out
 
     # ---------------- 验收辅助 ----------------
+    def _handle_report(self) -> dict:
+        """把手几何与演示假手到把手表面的间隙（球把手才给间隙）。"""
+        g = _id(self.m, mujoco.mjtObj.mjOBJ_GEOM, "handle_bar")
+        size = [round(float(v), 4) for v in self.m.geom_size[g][:3]]
+        kind = int(self.m.geom_type[g])
+        out = {"handle_geom_type": {2: "sphere", 5: "cylinder", 6: "box", 3: "capsule"}.get(kind, str(kind)),
+               "handle_geom_size": size}
+        dc = float(np.linalg.norm(self.d.site_xpos[self.site_hand["left"]] - self.d.xpos[self.body_handle]))
+        out["demo_hand_to_handle_center_m"] = round(dc, 4)
+        if kind == 2:
+            stub = _id(self.m, mujoco.mjtObj.mjOBJ_GEOM, "hand_stub_l_geom")
+            gap = dc - float(self.m.geom_size[g][0]) - float(self.m.geom_size[stub][0])
+            out["demo_handle_surface_gap_m"] = round(gap, 4)
+        return out
+
     def validate(self) -> dict:
         m = self.m
         gz = float(np.abs(m.opt.gravity[2]))
@@ -287,6 +302,7 @@ class CrutchInterface:
             "handle_over_hand_ref_m": round(handle_z - ref_z, 4),
             "crutch_mass_kg": round(float(m.body_mass[self.body_chassis] + m.body_mass[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "rod")]
                                           + m.body_mass[self.body_handle]), 3),
+            **self._handle_report(),
             "model_total_weight_N": round(float(m.body_mass.sum()) * gz, 2),
             "nq_nv_nu": [m.nq, m.nv, m.nu],
             "eq_inactive_at_start": bool(not np.any(self.d.eq_active)),
@@ -329,7 +345,9 @@ def selftest() -> int:
     for k in ("chassis_box_size", "chassis_mass_kg", "mass_ok", "rod_length_measured", "rod_length_ok",
               "handle_height_m", "handle_height_formula", "demo_hand_height_m", "demo_handle_minus_hand_m",
               "hand_height_ref_m", "rod_length_for_hand_ref_m", "handle_over_hand_ref_m",
-              "crutch_mass_kg", "nq_nv_nu", "eq_inactive_at_start"):
+              "crutch_mass_kg", "handle_geom_type", "handle_geom_size",
+              "demo_hand_to_handle_center_m", "demo_handle_surface_gap_m",
+              "nq_nv_nu", "eq_inactive_at_start"):
         print(f"    {k:28s} {v[k]}")
     print(f"    -> {'PASS' if v['ok'] else 'FAIL'}")
 
@@ -415,6 +433,9 @@ def selftest() -> int:
     print(f"    stub mass={m_stub:.3f} kg -> 期望 support={expect:.2f} N, 实测={got:.2f} N "
           f"(err {100 * (got - expect) / expect:+.2f}%)")
     print(f"    raw force(site frame)={np.round(out['grip_force_raw'], 2)}  world={np.round(out['grip_force_world'], 2)}")
+    tj = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "hand_stub_l_free")
+    f_efc = float(data.qfrc_constraint[int(model.jnt_dofadr[tj]) + 2]) if tj >= 0 else float("nan")
+    print(f"    独立通道：约束求解器 qfrc_constraint_z={f_efc:.4f} N（与传感器差 {f_efc - got:+.3e} N）")
 
     print("[5b] 已知附加载荷 / 偏航不变性 / 力矩通道")
     qy = int(model.jnt_qposadr[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "yaw")])
@@ -438,6 +459,7 @@ def selftest() -> int:
     print(f"    support={off['support_up_N']:+.2f} N  eq={off['eq_active']}")
 
     ok5 = (abs(got - expect) / expect < 0.02 and got > 0
+           and abs(f_efc - expect) < 1e-6
            and abs(yawed - expect) < 0.2
            and abs(extra - (expect + 19.62)) < 0.3
            and abs(tau[2] + 5.0) < 0.05

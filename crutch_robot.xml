@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <!--
-  crutch_robot.xml -- 等效全向底盘轮式拐杖机器人（首版）
+  crutch_robot.xml — 等效全向底盘轮式拐杖机器人（首版）
 
   几何/质量缺省值（均为可修改的仿真初值）：
     chassis box 全尺寸 0.39 x 0.29 x 0.25 m   -> size 为半尺寸 0.195 0.145 0.125
     chassis 质量 15.5 kg；杆件、把手质量单独设置
     chassis 名义离地间隙 0.05 m（box 底面高度），底盘中心 z = 0.175
     支撑杆 1.00 m 圆柱，从底盘上表面 (z=0.30) 起算
-    把手 水平圆柱，位于 z = 1.30
+    把手 Ø64 mm 球形，球心与握点均位于 z = 1.30
     slide_x / slide_y 为世界平移轴，yaw 为 Z hinge，仅靠阻尼抑制摆动
     X/Y 速度伺服，输出力限幅 ±400 N
     所有拐杖 geom 不参与接触（contype=conaffinity=0），底盘由关节约束支撑
@@ -50,7 +50,7 @@
         <geom name="rod_shaft" class="shaft" type="cylinder" size="0.016 0.5" pos="0 0 0.5" mass="2.0"/>
 
         <body name="handle" pos="0 0 1.0">
-          <geom name="handle_bar" class="grip" type="cylinder" size="0.015 0.12" euler="1.5707963 0 0" mass="0.6"/>
+          <geom name="handle_bar" class="grip" type="sphere" size="0.032" mass="0.6"/>
           <site name="grip_point" size="0.01" rgba="1.0 0.35 0.35 0.8"/>
           <site name="grip_sensor" size="0.008" rgba="0.2 0.9 0.9 0.6"/>
         </body>
