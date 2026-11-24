@@ -50,6 +50,8 @@ DEFAULTS = {
     "heading_speed_floor": 0.05,
     # 握持与辅助
     "grip_dist_tol": 0.05,
+    "grip_rel_speed_tol": 0.50,   # m/s, relative speed allowed at activation
+    "match_grip_velocity": True,  # at alignment, give the base the hand's velocity
     "hand_body": {"left": "hand_stub_l", "right": "hand_stub_r"},
     "hand_site": {"left": "hand_site_l", "right": "hand_site_r"},
     "free_side": "left",
@@ -86,6 +88,8 @@ class CrutchInterface:
         self.site_chassis = _id(model, mujoco.mjtObj.mjOBJ_SITE, p + "chassis_center")
         self.jnt_x = _id(model, mujoco.mjtObj.mjOBJ_JOINT, p + "slide_x")
         self.jnt_y = _id(model, mujoco.mjtObj.mjOBJ_JOINT, p + "slide_y")
+        yaw = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, p + "yaw")
+        self.dof_yaw = int(model.jnt_dofadr[yaw]) if yaw >= 0 else -1
         self.dof_x = int(model.jnt_dofadr[self.jnt_x])
         self.dof_y = int(model.jnt_dofadr[self.jnt_y])
         self.act = {n: _id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, p + n) for n in ("crutch_x", "crutch_y")}
@@ -131,6 +135,17 @@ class CrutchInterface:
             "eq_active": {s: bool(self.d.eq_active[self.eq[s]]) for s in ("left", "right")},
         }
 
+    def site_velocity(self, site_id: int) -> np.ndarray:
+        """World linear velocity of a site (m/s)."""
+        buf = np.zeros(6, dtype=float)
+        mujoco.mj_objectVelocity(self.m, self.d, mujoco.mjtObj.mjOBJ_SITE, site_id, buf, 0)
+        return np.array(buf[3:6], copy=True)
+
+    def grip_rel_speed(self, side: str) -> float:
+        """|v_grip_point - v_hand_site| in world coordinates (m/s)."""
+        return float(np.linalg.norm(self.site_velocity(self.site_grip)
+                                    - self.site_velocity(self.site_hand[side])))
+
     def tare_now(self) -> np.ndarray:
         """无连接、静止时取一次去皮基准；连接前必须调用。"""
         rot = self.d.xmat[self.body_handle].reshape(3, 3)
@@ -139,12 +154,16 @@ class CrutchInterface:
         return self.tare
 
     # ---------------- 握持 ----------------
-    def align_grip(self, side: str | None = None) -> dict:
+    def align_grip(self, side: str | None = None, match_velocity: bool | None = None) -> dict:
         """回合初始化时对齐握点：平移底盘使握点落在该手 site，并重算 anchor2。
 
-        只能在没有力学历史时调用（不覆盖仿真步进中的 qpos/qvel）。
-        返回剩余偏差；竖直方向不可由底盘修正。
+        只应在回合初始化阶段调用一次（仿真步进期间不再写 qpos/qvel）。
+        ``match_velocity`` 打开时同时把底盘速度设成该手的线速度、yaw 角速度置零，
+        这样闭合约束时握点相对速度接近 0，避免闭合瞬间的冲量。
+        返回剩余偏差与相对速度；竖直方向不可由底盘修正。
         """
+        if match_velocity is None:
+            match_velocity = bool(self.cfg["match_grip_velocity"])
         side = side or self.active_side or self.affected_side
         if self.d.eq_active[self.eq[side]]:
             raise RuntimeError(f"align_grip({side}) called while the connection is active; "
@@ -154,6 +173,17 @@ class CrutchInterface:
             self.d.site_xpos[self.site_grip] - self.d.xpos[self.body_chassis])
         qadr = int(self.m.jnt_qposadr[self.jnt_x])
         self.d.qpos[qadr:qadr + 2] = p_hand[:2] - grip_local[:2]
+        v_hand = self.site_velocity(self.site_hand[side])[:2] if match_velocity else None
+        if match_velocity:
+            self.d.qvel[self.dof_x] = float(v_hand[0])
+            self.d.qvel[self.dof_y] = float(v_hand[1])
+            if self.dof_yaw >= 0:
+                self.d.qvel[self.dof_yaw] = 0.0
+            # start the command history from the matched velocity so the
+            # dv-limiter does not immediately brake the base away from the hand
+            self._v_prev = np.array(v_hand, copy=True)
+            self._v_cmd = np.array(v_hand, copy=True)
+            self._v_meas_prev = np.array(v_hand, copy=True)
         mujoco.mj_forward(self.m, self.d)
 
         i = self.eq[side]
@@ -163,7 +193,12 @@ class CrutchInterface:
             self.d.site_xpos[self.site_grip] - self.d.xpos[self.body_hand[side]])
         mujoco.mj_forward(self.m, self.d)
         gap = float(np.linalg.norm(self.d.site_xpos[self.site_grip] - p_hand))
-        return {"side": side, "gap_m": gap, "aligned": gap <= self.cfg["grip_dist_tol"]}
+        rel = self.grip_rel_speed(side)
+        return {"side": side, "gap_m": gap, "rel_speed_m_s": rel,
+                "velocity_matched": bool(match_velocity),
+                "base_vel_after_align": [round(float(self.d.qvel[self.dof_x]), 4),
+                                         round(float(self.d.qvel[self.dof_y]), 4)],
+                "aligned": gap <= self.cfg["grip_dist_tol"] and rel <= self.cfg["grip_rel_speed_tol"]}
 
     def set_assistance(self, mode: str, affected_side: str = "left", force: bool = False) -> dict:
         """mode: none / contralateral(健侧持杖) / ipsilateral(患侧持杖)。"""
@@ -178,14 +213,22 @@ class CrutchInterface:
             target = "right" if affected_side == "left" else "left"
 
         gap_tol = float(self.cfg["grip_dist_tol"])
+        speed_tol = float(self.cfg["grip_rel_speed_tol"])
         if target is not None and not force:
             gap = float(np.linalg.norm(self.d.site_xpos[self.site_grip] - self.d.site_xpos[self.site_hand[target]]))
+            rel = self.grip_rel_speed(target)
+            reason = None
             if gap > gap_tol:
+                reason = "grip_offset_too_large"
+            elif rel > speed_tol:
+                # a moving grip would absorb an impulse the moment it closes
+                reason = "grip_rel_speed_too_large"
+            if reason is not None:
                 for s in ("left", "right"):
                     self.d.eq_active[self.eq[s]] = 0
                 self.active_side = None
                 self.mode, self.affected_side = mode, affected_side
-                return {"ok": False, "reason": "grip_offset_too_large", "gap_m": gap,
+                return {"ok": False, "reason": reason, "gap_m": gap, "rel_speed_m_s": rel,
                         "active_side": None, "eq_active": {s: False for s in ("left", "right")}}
 
         for s in ("left", "right"):
@@ -194,6 +237,7 @@ class CrutchInterface:
         return {"ok": True, "reason": "activated" if target else "no_assistance",
                 "gap_m": (float(np.linalg.norm(self.d.site_xpos[self.site_grip] - self.d.site_xpos[self.site_hand[target]]))
                           if target else float("nan")),
+                "rel_speed_m_s": self.grip_rel_speed(target) if target else float("nan"),
                 "active_side": target, "eq_active": {s: target == s for s in ("left", "right")}}
 
     # ---------------- 步进 ----------------
@@ -439,7 +483,21 @@ def selftest() -> int:
           f"eq={r['eq_active']}")
     ok4b = (not r["ok"]) and not any(r["eq_active"].values())
     print(f"    -> {'PASS' if ok4b else 'FAIL'}")
-    ok4 = ok4 and ok4b
+
+    print("[4c] 握点相对速度门限")
+    model, data, ci = load()
+    ci.align_grip("left")
+    tj = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "hand_stub_l_free")
+    adr = int(model.jnt_dofadr[tj])
+    data.qvel[adr:adr + 3] = [1.5, 0.0, 0.0]
+    mujoco.mj_forward(model, data)
+    rel = ci.grip_rel_speed("left")
+    r = ci.set_assistance("ipsilateral", "left")
+    print(f"    假手 1.5 m/s 平移、握点偏差 {r['gap_m']:.4f} m 时激活: ok={r['ok']} reason={r['reason']} "
+          f"rel={r['rel_speed_m_s']:.3f} m/s (门限 {ci.cfg['grip_rel_speed_tol']})")
+    ok4c = (not r["ok"]) and r["reason"] == "grip_rel_speed_too_large" and rel > ci.cfg["grip_rel_speed_tol"]
+    print(f"    -> {'PASS' if ok4c else 'FAIL'}")
+    ok4 = ok4 and ok4b and ok4c
 
     print("[5] 开启连接后的人机传力")
     model, data, ci = load(cfg={"forward_offset": 0.0, "lateral_offset": 0.0})
