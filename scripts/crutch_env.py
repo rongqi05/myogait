@@ -32,18 +32,75 @@ PREFIX = "crutch/"
 
 @dataclass
 class CrutchMount:
+    """How the crutch is attached to the human.
+
+    ``hand_body``   body that carries the palm grip site. The official
+                    ``*_hand_mimic`` sites sit on the lunate, i.e. the *wrist*,
+                    so the grasp point is a separate site placed on the third
+                    metacarpal instead (rigidly fixed to the wrist, no joint).
+    ``hand_grip``   name of the palm grip site added to the human model.
+    The same site is used by the equality, the calibration, the distance check
+    and the rendering, so "hand" means one point everywhere.
+    """
+
     xml: str = "crutch_robot.xml"
     rod_length: float = 1.00
     hand_body: dict = None
     hand_site: dict = None
+    hand_grip: dict = None
+    hand_grip_local: list = None
 
     def __post_init__(self):
-        self.hand_body = self.hand_body or {"left": "radius_l", "right": "radius_r"}
-        self.hand_site = self.hand_site or {"left": "left_hand_mimic", "right": "right_hand_mimic"}
+        self.hand_body = self.hand_body or {"left": "thirdmc_l", "right": "thirdmc_r"}
+        self.hand_site = self.hand_site or {"left": "hand_grip_l", "right": "hand_grip_r"}
+        self.hand_grip = self.hand_grip or dict(self.hand_site)
+        self.hand_grip_local = self.hand_grip_local or [0.0, 0.0, 0.0]
 
 
 GRIP_SOLREF = [0.02, 1.0]
 GRIP_SOLIMP = [0.9, 0.95, 0.001, 0.5, 2.0]
+
+PALM_SITE_RGBA = [1.0, 0.35, 0.15, 0.85]
+
+# marker colours used by the closure diagnostic; R = left palm, B = right palm, G = ball grip
+MARKER_RGBA = {"left": [0.95, 0.15, 0.15, 1.0], "right": [0.15, 0.35, 0.95, 1.0],
+               "grip": [0.15, 0.90, 0.25, 1.0]}
+
+
+def add_marker_geoms(spec, mount: CrutchMount) -> None:
+    """Visible spheres exactly on the two palm points and the ball grip point.
+
+    Diagnostic only: no mass (1e-6 kg) and no contacts, so they never change the
+    dynamics, but every render shows where the constraint actually acts.
+    """
+    targets = [(mount.hand_body[side], mount.hand_grip_local, MARKER_RGBA[side], 0.016)
+               for side in ("left", "right")]
+    targets.append((f"{PREFIX}handle", [0.0, 0.0, 0.0], MARKER_RGBA["grip"], 0.020))
+    for i, (body_name, pos, rgba, size) in enumerate(targets):
+        name = f"grip_marker_{i}"
+        if spec.geom(name) is not None:
+            continue
+        body = spec.body(body_name)
+        if body is None:
+            continue
+        body.add_geom(name=name, type=mujoco.mjtGeom.mjGEOM_SPHERE, size=[size, 0.0, 0.0],
+                      pos=list(pos), mass=1e-6, contype=0, conaffinity=0, rgba=list(rgba))
+
+
+def add_palm_sites(spec, mount: CrutchMount) -> None:
+    """Add one palm grip site per hand, on the metacarpal body.
+
+    Idempotent: an existing site with the target name is left alone.
+    """
+    for side in ("left", "right"):
+        name = mount.hand_grip[side]
+        if spec.site(name) is not None:
+            continue
+        body = spec.body(mount.hand_body[side])
+        if body is None:
+            raise RuntimeError(f"palm body {mount.hand_body[side]!r} not found in the human spec")
+        body.add_site(name=name, pos=list(mount.hand_grip_local),
+                      size=[0.012, 0.0, 0.0], rgba=list(PALM_SITE_RGBA))
 
 
 def build_child(mount: CrutchMount) -> mujoco.MjSpec:
@@ -68,16 +125,26 @@ def build_child(mount: CrutchMount) -> mujoco.MjSpec:
 
 _ORIG: dict[str, Any] = {}
 _RENDER: tuple[int, int] | None = None
+_ATTACH = True
+_MARKERS = False
 
 
-def install(mount: CrutchMount | None = None, render_size: tuple[int, int] | None = None):
-    """Install the env patches once. ``mount=None`` patches only the render size.
+def install(mount: CrutchMount | None = None, render_size: tuple[int, int] | None = None,
+            attach: bool = True, markers: bool = False):
+    """Install the env patches once.
+
+    ``mount=None``           patch only the render size
+    ``attach=False``         add the palm grip sites but do not attach the crutch
+                             (used by the calibration pass, which needs the same
+                             hand point without the robot in the scene)
 
     Returns the crutch spec that will be attached, or None when no mount is given.
     """
-    global _RENDER
+    global _RENDER, _ATTACH, _MARKERS
     _RENDER = render_size
-    child = build_child(mount) if mount is not None else None
+    _ATTACH = attach
+    _MARKERS = markers
+    child = build_child(mount) if (mount is not None and attach) else None
     if _ORIG:
         _ORIG["child"] = child
         _ORIG["mount"] = mount
@@ -109,20 +176,32 @@ def install(mount: CrutchMount | None = None, render_size: tuple[int, int] | Non
         if _RENDER is not None:
             spec.visual.global_.offwidth = int(_RENDER[0])
             spec.visual.global_.offheight = int(_RENDER[1])
-        if _ORIG.get("child") is not None and not any(b.name == f"{PREFIX}chassis" for b in spec.bodies):
-            frame = spec.worldbody.add_frame(pos=[0, 0, 0], quat=[1, 0, 0, 0], name="crutch_mount")
-            spec.attach(_ORIG["child"], frame=frame, prefix=PREFIX)
+        if _ORIG.get("mount") is not None:
+            mount = _ORIG["mount"]
+            add_palm_sites(spec, mount)
+        if _ORIG.get("child") is not None:
+            mount = _ORIG["mount"]
+            if not any(b.name == f"{PREFIX}chassis" for b in spec.bodies):
+                frame = spec.worldbody.add_frame(pos=[0, 0, 0], quat=[1, 0, 0, 0], name="crutch_mount")
+                spec.attach(_ORIG["child"], frame=frame, prefix=PREFIX)
             for side in ("left", "right"):
+                name = f"{PREFIX}grip_{side[0]}"
+                if spec.equality(name) is not None:
+                    continue
+                # site-to-site connect: MuJoCo holds the ball grip point on the
+                # palm grip point, so no anchor bookkeeping is needed anywhere
                 spec.add_equality(
-                    name=f"{PREFIX}grip_{side[0]}",
+                    name=name,
                     type=mujoco.mjtEq.mjEQ_CONNECT,
                     active=False,
-                    name1=f"{PREFIX}handle",
-                    name2=_ORIG["mount"].hand_body[side],
-                    objtype=mujoco.mjtObj.mjOBJ_BODY,
+                    name1=f"{PREFIX}grip_point",
+                    name2=mount.hand_grip[side],
+                    objtype=mujoco.mjtObj.mjOBJ_SITE,
                     solref=list(GRIP_SOLREF),
                     solimp=list(GRIP_SOLIMP),
                 )
+        if _MARKERS and _ORIG.get("mount") is not None:
+            add_marker_geoms(spec, _ORIG["mount"])
         return _ORIG["load_mujoco"](self, spec, model_option_conf)
 
     def obs_spec(self, spec):
@@ -190,6 +269,8 @@ def layout(model) -> dict:
         "n_human_joints": model.njnt - len(crutch_joints),
         "n_human_actuators": model.nu - len(crutch_acts),
         "crutch_joints": [mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, j) for j in crutch_joints],
+        "eq_objtype": [int(model.eq_objtype[i]) for i in range(model.neq)],
+        "eq_obj_ids": [[int(model.eq_obj1id[i]), int(model.eq_obj2id[i])] for i in range(model.neq)],
         "crutch_actuators": [mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_ACTUATOR, a) for a in crutch_acts],
         "crutch_act_ids": crutch_acts,
         "crutch_joint_ids": crutch_joints,

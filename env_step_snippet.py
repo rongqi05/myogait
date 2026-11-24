@@ -132,6 +132,8 @@ class CrutchInterface:
             "grip_force_world": f_world,
             "support_up_N": support_up,
             "grip_gap_m": gap,
+            "grip_dz_m": {s: float(self.d.site_xpos[self.site_hand[s]][2] - self.d.site_xpos[self.site_grip][2])
+                          for s in ("left", "right")},
             "eq_active": {s: bool(self.d.eq_active[self.eq[s]]) for s in ("left", "right")},
         }
 
@@ -155,7 +157,7 @@ class CrutchInterface:
 
     # ---------------- 握持 ----------------
     def align_grip(self, side: str | None = None, match_velocity: bool | None = None) -> dict:
-        """回合初始化时对齐握点：平移底盘使握点落在该手 site，并重算 anchor2。
+        """回合初始化时对齐握点：水平平移底盘，使球握点落在掌心握点正下方/正上方。
 
         只应在回合初始化阶段调用一次（仿真步进期间不再写 qpos/qvel）。
         ``match_velocity`` 打开时同时把底盘速度设成该手的线速度、yaw 角速度置零，
@@ -184,13 +186,8 @@ class CrutchInterface:
             self._v_prev = np.array(v_hand, copy=True)
             self._v_cmd = np.array(v_hand, copy=True)
             self._v_meas_prev = np.array(v_hand, copy=True)
-        mujoco.mj_forward(self.m, self.d)
-
-        i = self.eq[side]
-        self.m.eq_data[i][0:3] = self.d.xmat[self.body_handle].reshape(3, 3).T @ (
-            self.d.site_xpos[self.site_grip] - self.d.xpos[self.body_handle])
-        self.m.eq_data[i][3:6] = self.d.xmat[self.body_hand[side]].reshape(3, 3).T @ (
-            self.d.site_xpos[self.site_grip] - self.d.xpos[self.body_hand[side]])
+        # the equality is site-to-site, so nothing here touches eq_data: the
+        # constraint starts from whatever the two sites do at closing time
         mujoco.mj_forward(self.m, self.d)
         gap = float(np.linalg.norm(self.d.site_xpos[self.site_grip] - p_hand))
         rel = self.grip_rel_speed(side)

@@ -50,6 +50,7 @@ CRUTCH_KEYS = ("forward_offset", "lateral_offset", "k_ff", "k_pos", "k_vel", "v_
 COND_GRIP = {"A": None, "B_left": None, "B_right": None, "C": "left", "D": "right"}
 COND_SIDE = {"A": None, "B_left": "left", "B_right": "right", "C": "left", "D": "right"}
 ACT_FRAME = 0.30   # offset/height calibration frame, matches the default --settle
+ROD_BASE_Z = CRUTCH_DEFAULTS["clearance"] + 2.0 * CRUTCH_DEFAULTS["chassis_half_size"][2]  # chassis top
 STARTUP_WINDOW = 0.20   # s after the window opens: "startup" grip load
 SUSTAIN_WINDOW = 0.50   # s after the window opens: sustained grip load
 
@@ -64,24 +65,26 @@ def load_calibration(path: Path) -> dict:
 
 
 def variant_geometry(calib: dict, variant: str) -> dict:
-    """start_step / rod_length / per-side offsets for one comparison variant."""
-    if variant == "symmetric":
-        sym = calib["symmetric"]
-        return {"start_step": int(sym["start_step"]), "rod_length": float(sym["rod_length"]),
-                "offsets": {"left": {"forward": sym["forward"], "lateral": sym["lateral"]},
-                            "right": {"forward": sym["forward"], "lateral": -sym["lateral"]}}}
-    return {"start_step": 0, "rod_length": float(calib["rod_length"]),
-            "offsets": calib["offsets_by_side"]}
+    """start_step / rod_length / per-side offsets / expected closure error."""
+    blk = calib[variant]
+    return {
+        "start_step": int(blk["start_step"]),
+        "rod_length": float(blk["rod_length"]),
+        "offsets": blk["offsets_by_side"],
+        "dz_at_closure": blk.get("dz_at_closure", {}),
+        "palm_z": blk.get("palm_z", {}),
+    }
 
 
 def crutch_cfg(calib: dict, side: str | None, variant: str = "paired") -> dict:
     cfg = {k: CRUTCH_DEFAULTS[k] for k in CRUTCH_KEYS}
     geo = variant_geometry(calib, variant)
-    off = geo["offsets"][side] if side else calib["offsets"]
+    off = geo["offsets"][side] if side else {"forward": 0.0, "lateral": 0.0}
+    mount = crutch_env.CrutchMount()   # single source of truth for the palm point
     cfg.update(
         prefix=PREFIX,
-        hand_body={"left": "radius_l", "right": "radius_r"},
-        hand_site={"left": "left_hand_mimic", "right": "right_hand_mimic"},
+        hand_body=dict(mount.hand_body),
+        hand_site=dict(mount.hand_grip),
         forward_offset=off["forward"],
         lateral_offset=abs(off["lateral"]),
     )
@@ -89,12 +92,20 @@ def crutch_cfg(calib: dict, side: str | None, variant: str = "paired") -> dict:
 
 
 def build(merged: bool, calib: dict, horizon: int, render_size=None,
-          rod_length: float | None = None, start_step: int = 0):
+          rod_length: float | None = None, start_step: int = 0, palm: bool = False,
+          markers: bool = False):
+    """Build the env. ``palm`` adds the hand grip sites without the robot.
+
+    Calibration uses ``merged=False, palm=True``: the palm point must be the
+    same one the grip will use, but the robot itself perturbs nothing before the
+    constraint closes, so it is left out.
+    """
     mount = None
-    if merged:
-        mount = crutch_env.CrutchMount(xml=calib["crutch_xml"],
-                                       rod_length=calib["rod_length"] if rod_length is None else rod_length)
-    crutch_env.install(mount, render_size=render_size)
+    if merged or palm:
+        mount = crutch_env.CrutchMount(
+            xml=calib.get("crutch_xml", "crutch_robot.xml"),
+            rod_length=calib.get("rod_length", 1.00) if rod_length is None else rod_length)
+    crutch_env.install(mount, render_size=render_size, attach=merged, markers=markers)
     return build_eval_bundle(checkpoint_path=CKPT, motion_path=MOTION, start_step=int(start_step),
                              traj_index=0, horizon=horizon)
 
@@ -102,117 +113,162 @@ def build(merged: bool, calib: dict, horizon: int, render_size=None,
 # --------------------------------------------------------------------------- #
 # calibrate
 # --------------------------------------------------------------------------- #
-def calibrate(out_dir: Path, seconds: float, policy_mode: str = "stochastic") -> int:
-    """Measure the reference arm posture and derive both geometry variants.
+def _probe_activation(start_step: int, seconds: float, n_warm: int, policy_mode: str,
+                      seed: int = 0) -> dict:
+    """Reproduce the run protocol up to the closing instant and measure the hands.
 
-    ``paired``     per-side hand offsets at the activation frame (matches the
-                   asymmetric reference pose, so the two sides are NOT comparable)
-    ``symmetric``  the reference frame whose two hands are most comparable, with
-                   one ball height and mirrored lateral offsets
+    Reset at ``start_step``, advance ``n_warm`` control steps with the same
+    policy and seed the runs use, then read the palm grip sites. The human
+    dynamics do not depend on the crutch before the constraint closes, so this
+    is the exact state the runs will be in when they call ``set_assistance``.
     """
-    b = build(merged=False, calib={}, horizon=int(seconds / 0.01) + 5)
+    b = build(merged=False, calib={}, horizon=start_step + n_warm + int(seconds / 0.01) + 5,
+              palm=True, start_step=start_step)
     env, m, d = b.env, env_model(b.env), env_data(b.env)
     obs = np.asarray(env.reset())
     pf = make_policy_fn(b.agent_conf, policy_mode == "deterministic")
-    rng = jax.random.key(0)
-
-    r0 = {k: (round(v, 4) if isinstance(v, float) else v)
-          for k, v in crutch_env.reach(m, d, "left").items() if not isinstance(v, np.ndarray)}
-    r1 = {k: (round(v, 4) if isinstance(v, float) else v)
-          for k, v in crutch_env.reach(m, d, "right").items() if not isinstance(v, np.ndarray)}
-    hs = {s: mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, f"{s}_hand_mimic") for s in ("left", "right")}
+    rng = jax.random.key(seed)
+    palm_names = crutch_env.CrutchMount().hand_grip
+    sid = lambda n: mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, n)
+    hp = {s: sid(palm_names[s]) for s in ("left", "right")}
+    hw = {s: sid(f"{s}_hand_mimic") for s in ("left", "right")}
     jn = {s: {n: mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, n)
               for n in (f"shoulder_elv_{s[0]}", f"elbow_flex_{s[0]}")} for s in ("left", "right")}
 
-    rows = []
-    for _ in range(int(round(seconds / env.dt))):
+    for _ in range(n_warm):
         rng, _rng = jax.random.split(rng)
         a, _ts = pf(b.agent_state.train_state, obs, _rng)
         obs, *_ = env.step(a)
-        root = np.array(d.qpos[:3], copy=True)
-        row = [*(np.array(d.site_xpos[hs["left"]]) - root), *(np.array(d.site_xpos[hs["right"]]) - root),
-               float(d.site_xpos[hs["left"]][2]), float(d.site_xpos[hs["right"]][2])]
-        for side in ("left", "right"):
-            sh = np.array(d.xanchor[jn[side][f"shoulder_elv_{side[0]}"]], copy=True)
-            el = np.array(d.xanchor[jn[side][f"elbow_flex_{side[0]}"]], copy=True)
-            hand = np.array(d.site_xpos[hs[side]], copy=True)
-            upper = float(np.linalg.norm(el - sh))
-            fore = float(np.linalg.norm(hand - el))
-            span = upper + fore
-            dd = float(np.linalg.norm(hand - sh))
-            cos_el = (upper ** 2 + fore ** 2 - dd ** 2) / (2 * upper * fore) if upper * fore > 0 else 1.0
-            row += [dd / span if span > 0 else float("nan"),
-                    float(np.degrees(np.pi - np.arccos(np.clip(cos_el, -1, 1))))]
-        rows.append(row)
-    arr = np.asarray(rows)
-    hand_l, hand_r = arr[:, 0:3], arr[:, 3:6]
-    z_l, z_r = arr[:, 6], arr[:, 7]
-    reach_l, flex_l, reach_r, flex_r = arr[:, 8], arr[:, 9], arr[:, 10], arr[:, 11]
 
-    k_act = min(len(arr) - 1, int(round(ACT_FRAME / env.dt)))
-    hand_z_mean = float(0.5 * (z_l[k_act] + z_r[k_act]))
+    root = np.array(d.qpos[:3], copy=True)
+    out = {"start_step": int(start_step), "activation_step": int(start_step + n_warm),
+           "activation_time_s": round(float(d.time), 3), "palm_z": {}, "wrist_z": {},
+           "offset": {}, "reach_ratio": {}, "elbow_flexion_deg": {}, "hand_to_shoulder": {}}
+    for side in ("left", "right"):
+        pz = np.array(d.site_xpos[hp[side]], copy=True)
+        out["palm_z"][side] = round(float(pz[2]), 4)
+        out["wrist_z"][side] = round(float(d.site_xpos[hw[side]][2]), 4)
+        out["offset"][side] = {"forward": round(float(pz[0] - root[0]), 4),
+                               "lateral": round(float(pz[1] - root[1]), 4)}
+        sh = np.array(d.xanchor[jn[side][f"shoulder_elv_{side[0]}"]], copy=True)
+        el = np.array(d.xanchor[jn[side][f"elbow_flex_{side[0]}"]], copy=True)
+        upper = float(np.linalg.norm(el - sh))
+        fore = float(np.linalg.norm(pz - el))
+        span = upper + fore
+        dd = float(np.linalg.norm(pz - sh))
+        cos_el = (upper ** 2 + fore ** 2 - dd ** 2) / (2 * upper * fore) if upper * fore > 0 else 1.0
+        out["reach_ratio"][side] = round(dd / span if span > 0 else float("nan"), 4)
+        out["hand_to_shoulder"][side] = round(dd, 4)
+        out["elbow_flexion_deg"][side] = round(
+            float(np.degrees(np.pi - np.arccos(np.clip(cos_el, -1, 1)))), 2)
+    del b
+    gc.collect()
+    return out
 
-    # most comparable two-hand posture over the clip: equal height + mirrored lateral
-    cost = np.abs(z_l - z_r) + 0.5 * np.abs(np.abs(hand_l[:, 1]) - np.abs(hand_r[:, 1]))
-    k_sym = int(np.argmin(cost))
-    sym_z = float(0.5 * (z_l[k_sym] + z_r[k_sym]))
-    sym_lat = float(0.5 * (abs(hand_l[k_sym, 1]) + abs(hand_r[k_sym, 1])))
-    sym_fwd = float(0.5 * (hand_l[k_sym, 0] + hand_r[k_sym, 0]))
 
-    def rod(hz):
-        return round(hz - CRUTCH_DEFAULTS["clearance"] - 2 * CRUTCH_DEFAULTS["chassis_half_size"][2], 4)
+def calibrate(out_dir: Path, seconds: float, policy_mode: str = "stochastic",
+              settle: float = 0.30) -> int:
+    """Derive the ball height from the palms at the instant the grip closes.
+
+    ``L_rod = z_palm(at closing) - chassis_top``, with one common rod for both
+    sides per variant. The closing instant is ``start_step + warm-up``, i.e. the
+    state the runs are in when they activate the constraint, not the frame the
+    episode starts on and not a clip-wide average.
+
+    ``paired``     start at frame 0, per-side hand offsets (asymmetric reference)
+    ``symmetric``  start frame chosen so the *closing instant* has the most
+                   comparable two-hand posture, one height, mirrored offsets
+    """
+    dt_guess = 0.01
+    n_warm = int(round(settle / dt_guess))
+
+    # 1) a palm-only env, just to read dt and confirm the grip sites exist
+    b = build(merged=False, calib={}, horizon=int(seconds / 0.01) + 5, palm=True)
+    env, m, d = b.env, env_model(b.env), env_data(b.env)
+    dt = float(env.dt)
+    n_warm = int(round(settle / dt))
+    palm_names = crutch_env.CrutchMount().hand_grip
+    if any(mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, palm_names[s]) < 0 for s in ("left", "right")):
+        raise RuntimeError(f"palm grip sites missing: {palm_names}")
+
+    # 2) symmetric start frame: probe the real protocol on a coarse grid and take
+    #    the closing instant whose two palms are most comparable. A clip-wide
+    #    rollout from frame 0 is not a proxy here -- the posture after 30 steps
+    #    from a later start frame differs by centimetres.
+    stride = max(1, int(round(0.2 / dt)))
+    grid = list(range(0, int(3.0 / dt) + 1, stride))
+    probes = {k: _probe_activation(k, seconds, n_warm, policy_mode) for k in grid}
+    del b
+    gc.collect()
+
+    def posture_cost(pr):
+        zl, zr = pr["palm_z"]["left"], pr["palm_z"]["right"]
+        yl, yr = pr["offset"]["left"]["lateral"], pr["offset"]["right"]["lateral"]
+        return abs(zl - zr) + 0.5 * abs(yl + yr)
+
+    costs = {k: posture_cost(pr) for k, pr in probes.items()}
+    k_sym = min(costs, key=lambda k: costs[k])
+    p_sym = probes[k_sym]
+    p_paired = probes[0]
+
+    def common_rod(probe):
+        return round(0.5 * (probe["palm_z"]["left"] + probe["palm_z"]["right"]) - ROD_BASE_Z, 4)
+
+    def closure(probe, rod):
+        """Height difference each side will see when the constraint closes."""
+        return {s: round(probe["palm_z"][s] - (ROD_BASE_Z + rod), 4) for s in ("left", "right")}
+
+    rod_paired, rod_sym = common_rod(p_paired), common_rod(p_sym)
 
     calib = {
         "crutch_xml": "crutch_robot.xml",
         "checkpoint": CKPT,
         "motion": MOTION,
         "policy_mode": policy_mode,
-        "control_dt": float(env.dt),
-        "clip_frames": int(len(arr)),
-        "activation_frame_s": ACT_FRAME,
+        "control_dt": dt,
+        "symmetry_grid": grid,
         "clearance": CRUTCH_DEFAULTS["clearance"],
         "chassis_half_z": CRUTCH_DEFAULTS["chassis_half_size"][2],
-        # ---- variant 1: per-side offsets at the activation frame ----
-        "start_step": 0,
-        "hand_z_both_at_t0": round(float(0.5 * (z_l[0] + z_r[0])), 4),
-        "hand_z_both_at_activation_frame": round(hand_z_mean, 4),
-        "hand_z_left_mean_over_clip": round(float(z_l.mean()), 4),
-        "hand_z_right_mean_over_clip": round(float(z_r.mean()), 4),
-        "rod_length": rod(hand_z_mean),
-        "offsets": {"forward": round(float(0.5 * (hand_l[:, 0].mean() + hand_r[:, 0].mean())), 4),
-                    "lateral": round(float(0.5 * (abs(hand_l[:, 1]).mean() + abs(hand_r[:, 1]).mean())), 4)},
-        "offsets_by_side": {
-            "left": {"forward": round(float(hand_l[k_act, 0]), 4), "lateral": round(float(hand_l[k_act, 1]), 4)},
-            "right": {"forward": round(float(hand_r[k_act, 0]), 4), "lateral": round(float(hand_r[k_act, 1]), 4)},
+        "rod_base_z": round(ROD_BASE_Z, 4),
+        "warmup_steps": n_warm,
+        "palm_site": {"left": palm_names["left"], "right": palm_names["right"]},
+        "wrist_site": {"left": "left_hand_mimic", "right": "right_hand_mimic"},
+        "paired": {
+            "start_step": 0,
+            "rod_length": rod_paired,
+            "palm_z": p_paired["palm_z"],
+            "wrist_z": p_paired["wrist_z"],
+            "offsets_by_side": p_paired["offset"],
+            "dz_at_closure": closure(p_paired, rod_paired),
+            "reach_ratio": p_paired["reach_ratio"],
+            "hand_to_shoulder": p_paired["hand_to_shoulder"],
+            "elbow_flexion_deg": p_paired["elbow_flexion_deg"],
         },
-        "hand_offset_std": {"forward": round(float(0.5 * (hand_l[:, 0].std() + hand_r[:, 0].std())), 4),
-                            "lateral": round(float(0.5 * (hand_l[:, 1].std() + hand_r[:, 1].std())), 4)},
-        "reach_at_t0": {"left": r0, "right": r1},
-        # ---- variant 2: symmetric (comparable arm posture) ----
         "symmetric": {
             "start_step": k_sym,
-            "start_time_s": round(k_sym * float(env.dt), 3),
-            "hand_posture_cost": round(float(cost[k_sym]), 4),
-            "hand_z": round(sym_z, 4),
-            "rod_length": rod(sym_z),
-            "lateral": round(sym_lat, 4),
-            "forward": round(sym_fwd, 4),
-            "hand_z_left": round(float(z_l[k_sym]), 4),
-            "hand_z_right": round(float(z_r[k_sym]), 4),
-            "lateral_left": round(float(hand_l[k_sym, 1]), 4),
-            "lateral_right": round(float(hand_r[k_sym, 1]), 4),
-            "reach_ratio_left": round(float(reach_l[k_sym]), 4),
-            "reach_ratio_right": round(float(reach_r[k_sym]), 4),
-            "elbow_flexion_left_deg": round(float(flex_l[k_sym]), 2),
-            "elbow_flexion_right_deg": round(float(flex_r[k_sym]), 2),
+            "start_time_s": round(k_sym * dt, 3),
+            "activation_step": p_sym["activation_step"],
+            "activation_time_s": p_sym["activation_time_s"],
+            "hand_posture_cost_at_activation": round(float(costs[k_sym]), 4),
+            "hand_posture_cost_by_start": {int(k): round(float(v), 4) for k, v in costs.items()},
+            "rod_length": rod_sym,
+            "palm_z": p_sym["palm_z"],
+            "wrist_z": p_sym["wrist_z"],
+            "dz_at_closure": closure(p_sym, rod_sym),
+            "lateral": round(0.5 * (abs(p_sym["offset"]["left"]["lateral"])
+                                    + abs(p_sym["offset"]["right"]["lateral"])), 4),
+            "forward": round(0.5 * (p_sym["offset"]["left"]["forward"]
+                                    + p_sym["offset"]["right"]["forward"]), 4),
+            "offsets_by_side": p_sym["offset"],
+            "reach_ratio": p_sym["reach_ratio"],
+            "hand_to_shoulder": p_sym["hand_to_shoulder"],
+            "elbow_flexion_deg": p_sym["elbow_flexion_deg"],
         },
         "seconds": seconds,
     }
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "calibration.json").write_text(json.dumps(calib, indent=2))
     print(json.dumps(calib, indent=2))
-    del b
-    gc.collect()
     return 0
 
 
@@ -221,7 +277,8 @@ def calibrate(out_dir: Path, seconds: float, policy_mode: str = "stochastic") ->
 # --------------------------------------------------------------------------- #
 def run_condition(cond: str, seeds: list[int], seconds: float, out_dir: Path,
                   calib: dict, video: bool, settle: float, mode: str = "stochastic",
-                  variant: str = "paired") -> int:
+                  variant: str = "paired", markers: bool = False,
+                  camera: str = "overview") -> int:
     grip_side = COND_GRIP[cond]
     side = COND_SIDE[cond]
     merged = cond != "A"
@@ -234,7 +291,8 @@ def run_condition(cond: str, seeds: list[int], seconds: float, out_dir: Path,
 
     b = build(merged=merged, calib=calib, horizon=horizon,
               render_size=(1280, 720) if video else None,
-              rod_length=geo["rod_length"], start_step=geo["start_step"])
+              rod_length=geo["rod_length"], start_step=geo["start_step"],
+              markers=markers and merged)
     env, m, d = b.env, env_model(b.env), env_data(b.env)
     pf = make_policy_fn(b.agent_conf, mode == "deterministic")
     ci = CrutchInterface(m, d, cfg=crutch_cfg(calib, side, variant)) if merged else None
@@ -248,8 +306,10 @@ def run_condition(cond: str, seeds: list[int], seconds: float, out_dir: Path,
     pelvis = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, "pelvis_mimic")
     torso = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, "upper_body_mimic")
     grip_site = ci.site_grip if merged else -1
-    hand_site_id = {s: mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, f"{s}_hand_mimic")
-                    for s in ("left", "right")}
+    # the same palm point the constraint uses -- not the wrist mimic site
+    hand_site_id = ({s: ci.site_hand[s] for s in ("left", "right")} if merged
+                    else {s: mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, f"{s}_hand_mimic")
+                          for s in ("left", "right")})
     n_muscle_ctrl = layout["first_crutch_qpos"] if merged else 0  # 354 either way
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -259,9 +319,14 @@ def run_condition(cond: str, seeds: list[int], seconds: float, out_dir: Path,
         cam = mujoco.MjvCamera()
         cam.type = mujoco.mjtCamera.mjCAMERA_TRACKING
         cam.trackbodyid = 1
-        cam.distance = 4.4
-        cam.azimuth = 133.0
-        cam.elevation = -11.0
+        if camera == "side":
+            cam.distance = 3.2
+            cam.azimuth = 90.0
+            cam.elevation = -5.0
+        else:
+            cam.distance = 4.4
+            cam.azimuth = 133.0
+            cam.elevation = -11.0
 
     summary = []
     for seed in seeds:
@@ -289,10 +354,12 @@ def run_condition(cond: str, seeds: list[int], seconds: float, out_dir: Path,
             ci.tare_now()
             if grip_side:
                 gap_before = float(np.linalg.norm(d.site_xpos[grip_site] - d.site_xpos[hand_site_id[grip_side]]))
+                dz_before = float(d.site_xpos[hand_site_id[grip_side]][2] - d.site_xpos[grip_site][2])
                 rel_before = ci.grip_rel_speed(grip_side)
                 # the impaired side is always left here: C ipsilateral, D contralateral
                 act_info = ci.set_assistance("ipsilateral" if grip_side == "left" else "contralateral", "left")
                 act_info["gap_before_activation_m"] = gap_before
+                act_info["dz_before_activation_m"] = dz_before
                 act_info["rel_speed_before_activation_m_s"] = rel_before
                 if not act_info["ok"]:
                     print(f"[fail] {cond} seed {seed}: grip not activated: {act_info}")
@@ -333,6 +400,7 @@ def run_condition(cond: str, seeds: list[int], seconds: float, out_dir: Path,
                     "torque_raw": crutch_out["grip_torque_raw"].copy(),
                     "support_up": crutch_out["support_up_N"],
                     "grip_gap": crutch_out["grip_gap_m"][side] if side else float("nan"),
+                    "grip_dz": crutch_out["grip_dz_m"][side] if side else float("nan"),
                     "grip_active": bool(crutch_out["eq_active"][side]) if side else False,
                 })
             steps.append(rec)
@@ -376,6 +444,7 @@ def run_condition(cond: str, seeds: list[int], seconds: float, out_dir: Path,
             fx = np.array([s["force_world"][0] for s in steps])
             fy = np.array([s["force_world"][1] for s in steps])
             gap = np.array([s["grip_gap"] for s in steps])
+            dz = np.array([s["grip_dz"] for s in steps], dtype=float)
             cv = np.array([s["chassis_vel"] for s in steps])
             active = np.array([s["grip_active"] for s in steps], dtype=float) if side else np.zeros(len(steps))
             start = walk_t <= STARTUP_WINDOW
@@ -392,6 +461,11 @@ def run_condition(cond: str, seeds: list[int], seconds: float, out_dir: Path,
                 "fy_abs_mean_N": round(float(np.abs(fy).mean()), 2),
                 "grip_gap_max_m": round(float(np.nanmax(gap)), 4),
                 "grip_gap_mean_m": round(float(np.nanmean(gap)), 4),
+                "dz_start_m": round(float(dz[0]), 4) if len(dz) else float("nan"),
+                "dz_mean_m": round(float(np.nanmean(dz)), 4),
+                "dz_p05_m": round(float(np.nanpercentile(dz, 5)), 4),
+                "dz_p95_m": round(float(np.nanpercentile(dz, 95)), 4),
+                "dz_max_abs_m": round(float(np.nanmax(np.abs(dz))), 4),
                 "chassis_speed_mean": round(float(np.linalg.norm(cv, axis=1).mean()), 3),
                 "chassis_speed_max": round(float(np.linalg.norm(cv, axis=1).max()), 3),
             })
@@ -416,6 +490,7 @@ def run_condition(cond: str, seeds: list[int], seconds: float, out_dir: Path,
                 "force_raw": np.array([s["force_raw"] for s in steps]),
                 "support_up": np.array([s["support_up"] for s in steps]),
                 "grip_gap": np.array([s["grip_gap"] for s in steps]),
+                "grip_dz": np.array([s["grip_dz"] for s in steps]),
                 "grip_active": np.array([s["grip_active"] for s in steps]),
                 "v_cmd": np.array([s["v_cmd"] for s in steps])} if merged else {}),
         )
@@ -449,6 +524,8 @@ def main() -> int:
     ap.add_argument("--video", action="store_true")
     ap.add_argument("--calib", default=None)
     ap.add_argument("--policy_mode", choices=["stochastic", "deterministic"], default="stochastic")
+    ap.add_argument("--markers", action="store_true", help="draw spheres on the two palm points and the ball grip point")
+    ap.add_argument("--camera", choices=["overview", "side"], default="overview")
     ap.add_argument("--variant", choices=["paired", "symmetric"], default="paired",
                     help="paired: per-side offsets (asymmetric reference pose); "
                          "symmetric: one ball height, mirrored lateral offsets, comparable arm posture")
@@ -458,7 +535,7 @@ def main() -> int:
     calib_path = Path(args.calib) if args.calib else out / "calibration.json"
 
     if args.mode == "calibrate":
-        return calibrate(out, max(args.seconds, 10.0), args.policy_mode)
+        return calibrate(out, max(args.seconds, 10.0), args.policy_mode, args.settle)
     if args.mode == "compose":
         return compose(out, args.seeds)
     calib = load_calibration(calib_path)
@@ -466,10 +543,12 @@ def main() -> int:
     geo = variant_geometry(calib, args.variant)
     print(f"[{args.condition}] policy={args.policy_mode} variant={args.variant} "
           f"seconds={args.seconds} seeds={args.seeds} rod={geo['rod_length']} "
-          f"start_step={geo['start_step']} offsets={geo['offsets']}")
+          f"start_step={geo['start_step']} offsets={geo['offsets']} "
+          f"expected_dz_at_closure={geo['dz_at_closure']}")
     sub = f"{args.seconds:g}s" if args.variant == "paired" else f"{args.seconds:g}s_{args.variant}"
     rc = run_condition(args.condition, args.seeds, args.seconds, out / sub,
-                       calib, args.video, args.settle, args.policy_mode, args.variant)
+                       calib, args.video, args.settle, args.policy_mode, args.variant,
+                       args.markers, args.camera)
     print(f"wall {time.time() - t0:.1f}s")
     return rc
 

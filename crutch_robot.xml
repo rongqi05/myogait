@@ -14,8 +14,10 @@
     轮子仅显示，各 1 g，避免改变底盘 15.5 kg 的标定质量
 
   演示占位 site：hand_stub_l / hand_stub_r（自由刚体）上的 hand_site_l / hand_site_r。
-  集成到 MyoFullBody 时把两条 connect 的 body2 改为 radius_l / radius_r，
-  并把 anchor2 交给 env_step_snippet.align_grip() 重算，见该文件说明。
+  两条 connect 均为 site-to-site：site1 = 球心 grip_point，site2 = 手部握点。
+  集成到 MyoFullBody 时由 scripts/crutch_env.py 在第三掌骨上新增掌心握点
+  hand_grip_l / hand_grip_r，并把 site2 指向它们；约束、标定、距离检查与渲染
+  都使用同一个点，不需要重算任何锚点。
 -->
 <mujoco model="crutch_robot">
   <compiler angle="radian" autolimits="true"/>
@@ -70,10 +72,13 @@
     </body>
   </worldbody>
 
+  <!-- site-to-site connect: the ball grip point is held on the hand grip site.
+       No anchor bookkeeping, and the same constraint works once the demo stubs
+       are replaced by the real palm sites (see scripts/crutch_env.py). -->
   <equality>
-    <connect name="grip_l" body1="handle" body2="hand_stub_l" anchor="0 0 0"
+    <connect name="grip_l" site1="grip_point" site2="hand_site_l"
              active="false" solref="0.02 1" solimp="0.9 0.95 0.001"/>
-    <connect name="grip_r" body1="handle" body2="hand_stub_r" anchor="0 0 0"
+    <connect name="grip_r" site1="grip_point" site2="hand_site_r"
              active="false" solref="0.02 1" solimp="0.9 0.95 0.001"/>
   </equality>
 
